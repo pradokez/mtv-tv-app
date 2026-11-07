@@ -40,7 +40,6 @@ class MainActivity : Activity() {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 mediaPlaybackRequiresUserGesture = false
-                cacheMode = WebSettings.LOAD_DEFAULT
                 // O app web só precisa dos assets locais e do player do YouTube (https).
                 allowFileAccess = false
                 allowContentAccess = false
@@ -55,23 +54,13 @@ class MainActivity : Activity() {
         }
         setContentView(webView)
 
-        if (savedInstanceState != null) {
-            webView.restoreState(savedInstanceState)
-        } else {
-            webView.loadUrl(START_URL)
-        }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        webView.saveState(outState)
+        webView.loadUrl(START_URL)
     }
 
     override fun onResume() {
         super.onResume()
         hideSystemBars()
         webView.onResume()
-        webView.resumeTimers()
     }
 
     override fun onPause() {
@@ -92,15 +81,16 @@ class MainActivity : Activity() {
     /**
      * Repassa as teclas do controle para o app web como KeyboardEvent. CH+/CH- (e PAGE_UP/DOWN,
      * que alguns controles enviam no lugar) não chegam ao navegador sozinhos.
-     * O app web decide o que fazer com Voltar; se ele não tratar, a Activity sai.
+     * O app web decide o que fazer com Voltar (keydown); se não retornar true, a Activity sai.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val spec = KEYS[event.keyCode] ?: return super.dispatchKeyEvent(event)
-        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 || event.action == KeyEvent.ACTION_UP) {
-            val type = if (event.action == KeyEvent.ACTION_DOWN) "keydown" else "keyup"
+        val isDown = event.action == KeyEvent.ACTION_DOWN
+        if (!isDown || event.repeatCount == 0) {
+            val type = if (isDown) "keydown" else "keyup"
             val js = "window.dispatchTvKey && window.dispatchTvKey('$type','${spec.key}','${spec.code}',${spec.keyCode},${event.keyCode})"
             webView.evaluateJavascript(js) { handled ->
-                if (event.keyCode == KeyEvent.KEYCODE_BACK && type == "keyup" && handled != "true") {
+                if (event.keyCode == KeyEvent.KEYCODE_BACK && isDown && handled != "true") {
                     finish()
                 }
             }
