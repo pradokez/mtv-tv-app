@@ -17,6 +17,10 @@ export type Command =
   | { type: "guideDown" }
   /** Tune to the channel focused in the guide. */
   | { type: "guideSelect" }
+  /** Switch between "Sair" and "Continuar" in the exit confirmation. */
+  | { type: "exitMove" }
+  /** Pick the highlighted option of the exit confirmation. */
+  | { type: "exitSelect" }
   | { type: "none" };
 
 export type CommandType = Command["type"];
