@@ -108,6 +108,7 @@ describe("tuner", () => {
     player.fail();
     player.fail();
     player.fail();
+    player.end();
 
     expect(loadedIds(player)).toEqual(["a", "b", "c"]);
     expect(statuses).toEqual(["playing", "unavailable"]);
