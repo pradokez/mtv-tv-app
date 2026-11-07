@@ -38,25 +38,10 @@ body {
   text-shadow: 0 0 4px #000, 0 2px 8px #000;
 }
 
-.status-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: grid;
-  place-items: center;
-  margin: 0;
-  padding: 5%;
-  background: #000;
-  font-size: 2.5rem;
-  text-align: center;
-}
-
-.status-overlay[hidden] {
-  display: none;
-}
-
+/* Full-screen centered messages: connection/channel status and fatal errors. */
+.status-overlay,
 #fatal {
-  position: fixed;
+  position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
@@ -66,8 +51,19 @@ body {
   text-align: center;
 }
 
+.status-overlay[hidden],
 #fatal[hidden] {
   display: none;
+}
+
+/* Opaque, so YouTube's own error screen underneath is never seen. */
+.status-overlay {
+  z-index: 3;
+  background: #000;
+}
+
+#fatal {
+  position: fixed;
 }
 
 /* Dev-only panel for ?player=fake. */
