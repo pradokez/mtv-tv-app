@@ -86,7 +86,14 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
     window.addEventListener("pointerdown", unmute, { once: true, capture: true });
   };
 
-  void loadIframeApi().then((YT) => {
+  // Opening the app offline makes the script fail: try again once the
+  // connection is back, and play whatever was loaded meanwhile.
+  const retryWhenOnline = (error: unknown) => {
+    console.error(error);
+    window.addEventListener("online", mountPlayer, { once: true });
+  };
+
+  const mountPlayer = () => void loadIframeApi().then((YT) => {
     const mount = document.createElement("div");
     container.prepend(mount);
     player = new YT.Player(mount, {
@@ -115,7 +122,8 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
         },
       },
     });
-  }, (error: unknown) => console.error(error));
+  }, retryWhenOnline);
+  mountPlayer();
 
   return {
     load(videoId, startSec) {
@@ -136,7 +144,12 @@ function loadIframeApi(): Promise<YTNamespace> {
     window.onYouTubeIframeAPIReady = () => resolve(window.YT!);
     const script = document.createElement("script");
     script.src = IFRAME_API_URL;
-    script.onerror = () => reject(new Error("Falha ao carregar o player do YouTube"));
+    script.onerror = () => {
+      // Forget the failure so the next call can try again.
+      apiPromise = undefined;
+      script.remove();
+      reject(new Error("Falha ao carregar o player do YouTube"));
+    };
     document.head.append(script);
   });
   return apiPromise;
