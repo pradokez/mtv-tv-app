@@ -114,3 +114,15 @@ describe("tuner", () => {
     expect(tuner.current()).toEqual({ channelId: "80s", videoId: "b" });
   });
 });
+
+describe("onNowPlaying", () => {
+  it("fires when tuning and when the next clip starts", () => {
+    const { player, tuner } = setup();
+    const seen: string[] = [];
+    tuner.onNowPlaying((n) => seen.push(`${n.channelId}:${n.videoId}`));
+    tuner.tune("80s");
+    player.end();
+    tuner.tune("90s");
+    expect(seen).toEqual(["80s:a", "80s:b", "90s:x"]);
+  });
+});
