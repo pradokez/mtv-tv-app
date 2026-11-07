@@ -5,9 +5,9 @@ import { map } from "./input/input-mapper";
 import { systemClock } from "./lib/clock";
 import { watchConnectivity } from "./lib/connectivity";
 import { mathRandom } from "./lib/random";
+import { createStatusOverlay } from "./overlays/status-overlay";
 import { FakePlayer, mountFakePlayerView } from "./player/fake-player";
 import type { PlayerAdapter } from "./player/player";
-import { createStatusOverlay } from "./overlays/status-overlay";
 import { createYouTubePlayer } from "./player/youtube-player";
 import { createTuner, type Tuner, type TunerStatus } from "./tuner/tuner";
 
