@@ -5,11 +5,14 @@ import { map } from "./input/input-mapper";
 import { systemClock } from "./lib/clock";
 import { watchConnectivity } from "./lib/connectivity";
 import { mathRandom } from "./lib/random";
-import { createStatusOverlay } from "./overlays/status-overlay";
 import { FakePlayer, mountFakePlayerView } from "./player/fake-player";
 import type { PlayerAdapter } from "./player/player";
 import { createYouTubePlayer } from "./player/youtube-player";
-import { createTuner, type Tuner, type TunerStatus } from "./tuner/tuner";
+import { lowerThirdLines } from "./overlays/lower-third";
+import { createOverlays } from "./overlays/overlays";
+import { mountOverlaysView } from "./overlays/overlays-view";
+import { createStatusOverlay } from "./overlays/status-overlay";
+import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tuner/tuner";
 
 async function main(): Promise<void> {
   const stage = document.getElementById("stage")!;
@@ -20,10 +23,61 @@ async function main(): Promise<void> {
   const player = createPlayer(stage);
   const tuner = createTuner({ catalog, player, clock: systemClock, random: mathRandom });
   showStatus(stage, tuner);
+
+  const overlays = createOverlays({
+    clock: systemClock,
+    onExit: () => window.MtvTv?.exitApp(),
+    onChange: mountOverlaysView(document.getElementById("overlays")!),
+  });
+  const showLowerThird = (nowPlaying: NowPlaying | undefined) => {
+    const channel = nowPlaying && catalog.channel(nowPlaying.channelId);
+    if (nowPlaying && channel) overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name));
+  };
+  tuner.onNowPlaying(showLowerThird);
   tuner.tune(firstChannel.id);
 
-  const ui: UiState = { overlay: "none", mode: "queue" };
-  window.addEventListener("keydown", (event) => dispatch(map(event, ui)));
+  const dispatch = (command: Command): void => {
+    switch (command.type) {
+      case "showInfo":
+        showLowerThird(tuner.current());
+        break;
+      case "back":
+        overlays.back();
+        break;
+      case "exitMove":
+        overlays.exitMove();
+        break;
+      case "exitSelect":
+        overlays.exitSelect();
+        break;
+      // Zapping, guide and skip are wired by later slices (#5, #9).
+      default:
+        break;
+    }
+  };
+
+  window.addEventListener("keydown", (event) => {
+    const ui: UiState = { overlay: overlays.state().overlay, mode: "queue" };
+    dispatch(map(event, ui));
+  });
+
+  // Contract with the Android shell: it calls this for every remote key and
+  // exits the app on Back unless we answer `true`. Leaving is only possible
+  // through the exit confirmation (`MtvTv.exitApp`), so every key is handled.
+  window.dispatchTvKey = (type, key, code, keyCode) => {
+    document.dispatchEvent(
+      new KeyboardEvent(type, { key, code, keyCode, which: keyCode, bubbles: true, cancelable: true }),
+    );
+    return true;
+  };
+}
+
+declare global {
+  interface Window {
+    /** Bridge injected by the Android shell; absent in a regular browser. */
+    MtvTv?: { exitApp(): void };
+    dispatchTvKey?: (type: string, key: string, code: string, keyCode: number, androidKeyCode?: number) => boolean;
+  }
 }
 
 async function loadCatalog(): Promise<Catalog> {
@@ -66,9 +120,6 @@ function showStatus(stage: HTMLElement, tuner: Tuner): void {
     render();
   });
 }
-
-/** Commands are wired to the Tuner and overlays by later slices (#5, #6, #9). */
-function dispatch(_command: Command): void {}
 
 function showFatal(error: unknown): void {
   console.error(error);

@@ -34,6 +34,8 @@ export interface Tuner {
   /** `videoId` failed to play: if it is the current one, never try it again and move on. */
   onError(videoId: string): void;
   current(): NowPlaying | undefined;
+  /** Called each time a clip starts: on tuning and when the next one begins. */
+  onNowPlaying(listener: (nowPlaying: NowPlaying) => void): Unsubscribe;
   /**
    * Connection state. Offline, errors are ignored (no network is not the
    * video's fault); back online, the current video reloads from the start.
@@ -52,6 +54,7 @@ export function createTuner({ catalog, player }: TunerDeps): Tuner {
   /** Videos that failed to play this session; never tried again, on any channel. */
   const bad = new Set<string>();
   const statusChanged = createEmitter<[status: TunerStatus]>();
+  const started = createEmitter<[nowPlaying: NowPlaying]>();
 
   const currentVideoId = () => (index === undefined ? undefined : channel?.videoIds[index]);
 
@@ -74,8 +77,10 @@ export function createTuner({ catalog, player }: TunerDeps): Tuner {
       }
     }
     const videoId = currentVideoId();
-    if (videoId) player.load(videoId, 0);
-    setStatus(videoId ? "playing" : "unavailable");
+    if (!videoId) return setStatus("unavailable");
+    player.load(videoId, 0);
+    setStatus("playing");
+    started.emit({ channelId: channel.id, videoId });
   };
 
   const advance = () => {
@@ -95,6 +100,7 @@ export function createTuner({ catalog, player }: TunerDeps): Tuner {
       bad.add(videoId);
       advance();
     },
+    onNowPlaying: (listener) => started.on(listener),
     current() {
       const videoId = currentVideoId();
       return channel && videoId ? { channelId: channel.id, videoId } : undefined;
