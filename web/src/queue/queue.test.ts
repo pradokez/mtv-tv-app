@@ -55,4 +55,8 @@ describe("queue", () => {
     const queue = createQueue(["x"], 1);
     expect(take(queue, 3)).toEqual(["x", "x", "x"]);
   });
+
+  it("refuses an empty playlist", () => {
+    expect(() => createQueue([], 1)).toThrow("Fila sem vídeos");
+  });
 });
