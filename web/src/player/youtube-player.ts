@@ -16,6 +16,7 @@ interface YTPlayer {
   unMute(): void;
   getPlayerState(): number;
   setPlaybackQuality?(quality: string): void;
+  destroy(): void;
 }
 
 interface YTNamespace {
@@ -52,7 +53,14 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
   const errored = createEmitter<[videoId: string, code: number]>();
   const hint = createSoundHint(container);
 
+  /** Set once the player is ready to take commands. */
   let player: YTPlayer | undefined;
+  /**
+   * After an error the embedded player keeps its controls overlay on screen
+   * (seen on the Android TV WebView), even for the next videos. The next load
+   * then goes to a fresh player instead.
+   */
+  let failed = false;
   let currentVideoId: string | undefined;
   let pending: { videoId: string; startSec: number } | undefined;
   let autoplayCheck: TimerId | undefined;
@@ -96,7 +104,7 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
   const mountPlayer = () => void loadIframeApi().then((YT) => {
     const mount = document.createElement("div");
     container.prepend(mount);
-    player = new YT.Player(mount, {
+    const instance = new YT.Player(mount, {
       width: "100%",
       height: "100%",
       playerVars: {
@@ -111,6 +119,9 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
       },
       events: {
         onReady: () => {
+          player = instance;
+          // A replacement player must stay muted until the user unmutes.
+          if (muted) instance.mute();
           if (pending) start(pending.videoId, pending.startSec);
           pending = undefined;
         },
@@ -118,6 +129,7 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
           if (data === State.ENDED && currentVideoId) ended.emit(currentVideoId);
         },
         onError: ({ data }) => {
+          failed = true;
           if (currentVideoId) errored.emit(currentVideoId, data);
         },
       },
@@ -125,9 +137,19 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
   }, retryWhenOnline);
   mountPlayer();
 
+  const replacePlayer = () => {
+    failed = false;
+    if (autoplayCheck !== undefined) clock.clearTimeout(autoplayCheck);
+    autoplayCheck = undefined;
+    player?.destroy();
+    player = undefined;
+    mountPlayer();
+  };
+
   return {
     load(videoId, startSec) {
       currentVideoId = videoId;
+      if (failed && player) replacePlayer();
       if (player) start(videoId, startSec);
       else pending = { videoId, startSec };
     },
