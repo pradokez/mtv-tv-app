@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-07T00:00:00Z",
+  "channels": [
+    {
+      "id": "80s",
+      "name": "Anos 80",
+      "icon": "icons/80s.svg",
+      "order": 0,
+      "videoIds": ["djV11Xbc914", "W8r-tXRLazs", "dQw4w9WgXcQ"]
+    },
+    {
+      "id": "90s",
+      "name": "Anos 90",
+      "icon": "icons/90s.svg",
+      "order": 1,
+      "videoIds": ["hTWKbfoikeg", "HEXWRTEbj1I", "gJLIiF15wjQ"]
+    }
+  ],
+  "videos": {
+    "djV11Xbc914": { "artist": "a-ha", "song": "Take On Me", "title": "a-ha - Take On Me (Official Video) [4K]" },
+    "W8r-tXRLazs": { "artist": "The Buggles", "song": "Video Killed The Radio Star", "title": "The Buggles - Video Killed The Radio Star (Official Music Video)" },
+    "dQw4w9WgXcQ": { "artist": "Rick Astley", "song": "Never Gonna Give You Up", "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)" },
+    "hTWKbfoikeg": { "artist": "Nirvana", "song": "Smells Like Teen Spirit", "title": "Nirvana - Smells Like Teen Spirit (Official Music Video)" },
+    "HEXWRTEbj1I": { "artist": "Haddaway", "song": "What Is Love", "title": "Haddaway - What Is Love [Official]" },
+    "gJLIiF15wjQ": { "artist": "Spice Girls", "song": "Wannabe", "title": "Spice Girls - Wannabe (Official Music Video)" }
+  }
+}

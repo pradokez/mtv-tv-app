@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Only the app itself and the YouTube player may load code or frames, and
+      the app may only fetch its own files: no request can reach the original
+      catalog site or any other server.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com; img-src 'self' data: https://i.ytimg.com; style-src 'self' 'unsafe-inline'; connect-src 'self'"
+    />
+    <title>MTV TV</title>
+  </head>
+  <body>
+    <main id="stage">
+      <!-- The player mounts its iframe here; the shield above it swallows the
+           mouse so YouTube never shows its hover title bar or controls. -->
+      <div class="shield"></div>
+    </main>
+    <p id="fatal" role="alert" hidden></p>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
