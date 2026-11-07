@@ -14,7 +14,7 @@ Requisitos: Node 22+ e pnpm.
 ```bash
 cd web
 pnpm install
-pnpm dev         # http://localhost:5173 — toca o primeiro canal do catálogo
+pnpm dev         # http://localhost:5173 — abre no último canal visto (no primeiro uso, no primeiro do catálogo)
 pnpm test        # Vitest
 pnpm typecheck   # tsc estrito
 pnpm build       # gera web/dist/
@@ -22,6 +22,7 @@ pnpm build       # gera web/dist/
 
 - **Tela cheia no Mac:** ⌃⌘F no navegador. O app ocupa a janela inteira e não usa a Fullscreen API, que exige um gesto do usuário.
 - **Som:** navegadores de desktop bloqueiam autoplay com som. Nesse caso o clipe toca mudo e aparece "Aperte qualquer tecla para ligar o som". Para evitar o aviso, libere "Som: Permitir" para `localhost` nas configurações do site no Chrome.
+- **Teclado como controle:** ↑/↓ ou PageUp/PageDown trocam de canal (como CH+/CH-), → pula o clipe, Enter mostra a tarja e Esc é o Voltar.
 - **Sem rede ou sem YouTube:** `http://localhost:5173/?player=fake` troca o player por um painel com o vídeo atual e botões "Terminar" e "Erro".
 - **Catálogo:** `web/public/catalog.json` é um catálogo de exemplo. O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
 - O app não faz nenhuma requisição ao site original do catálogo: a CSP do `index.html` só libera o próprio app e o player do YouTube, e um teste falha se o código citar o domínio.
