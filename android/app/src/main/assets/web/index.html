@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTV TV - página de exemplo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+  main { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; }
+  h1 { font-size: 40px; margin: 0; font-weight: 400; opacity: .6; }
+  #key { font-size: 120px; font-weight: 700; }
+  #detail, #life { font-size: 32px; opacity: .8; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Página de exemplo da casca Android TV</h1>
+  <div id="key">—</div>
+  <div id="detail">Aperte uma tecla do controle</div>
+  <div id="life"></div>
+</main>
+<script>
+  // A página só existe até a #2 colocar o build do app web nesta pasta (assets/web/).
+  const started = Date.now();
+  const lifeEl = document.getElementById('life');
+  setInterval(() => {
+    // Se a WebView recarregasse do zero, este contador voltaria a 0.
+    lifeEl.textContent = 'aberta há ' + Math.floor((Date.now() - started) / 1000) + 's';
+  }, 500);
+
+  let lastBack = 0;
+  // Chamada pela casca nativa (MainActivity.dispatchKeyEvent). Retorna true se tratou a tecla.
+  window.dispatchTvKey = function (type, key, code, keyCode, androidKeyCode) {
+    const ev = new KeyboardEvent(type, { key, code, keyCode, which: keyCode, bubbles: true, cancelable: true });
+    document.dispatchEvent(ev);
+    if (type !== 'keydown') return true;
+    document.getElementById('key').textContent = key;
+    document.getElementById('detail').textContent =
+      'code=' + code + ' keyCode=' + keyCode + ' android=' + androidKeyCode;
+    if (key === 'Escape') {
+      // Voltar duas vezes em 2 s sai do app (o app real mostrará uma confirmação).
+      const now = Date.now();
+      const exit = now - lastBack < 2000;
+      lastBack = now;
+      return !exit;
+    }
+    return true;
+  };
+  // Teclado do Mac no navegador de desenvolvimento.
+  document.addEventListener('keydown', (e) => {
+    if (!e.isTrusted) return;
+    document.getElementById('key').textContent = e.key;
+    document.getElementById('detail').textContent = 'code=' + e.code + ' keyCode=' + e.keyCode;
+  });
+</script>
+</body>
+</html>
