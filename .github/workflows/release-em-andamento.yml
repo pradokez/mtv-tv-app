@@ -1,0 +1,22 @@
+# Removes the `em-andamento` ("someone is already implementing this") label
+# when an issue is closed, e.g. by a merged PR with `Closes #<n>`.
+name: Release em-andamento label
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  remove-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        # Ignore the failure when the issue doesn't have the label.
+        run: gh issue edit "$ISSUE" --repo "$REPO" --remove-label em-andamento || true
