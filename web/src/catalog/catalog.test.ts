@@ -75,7 +75,7 @@ describe("parseCatalog", () => {
   });
 
   it("accepts the bundled sample catalog", () => {
-    const sample = JSON.parse(readFileSync(new URL("../../public/catalog.json", import.meta.url), "utf8"));
+    const sample = JSON.parse(readFileSync(new URL("../../fixtures/catalog.example.json", import.meta.url), "utf8"));
 
     const catalog = parseCatalog(sample);
 
