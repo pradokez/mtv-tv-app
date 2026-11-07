@@ -23,6 +23,7 @@ pnpm build       # gera web/dist/
 - **Tela cheia no Mac:** ⌃⌘F no navegador. O app ocupa a janela inteira e não usa a Fullscreen API, que exige um gesto do usuário.
 - **Som:** navegadores de desktop bloqueiam autoplay com som. Nesse caso o clipe toca mudo e aparece "Aperte qualquer tecla para ligar o som". Para evitar o aviso, libere "Som: Permitir" para `localhost` nas configurações do site no Chrome.
 - **Sem rede ou sem YouTube:** `http://localhost:5173/?player=fake` troca o player por um painel com o vídeo atual e botões "Terminar" e "Erro".
+- **Vídeo com erro e sem internet:** um vídeo que falha é pulado e não volta na sessão. Se todos os vídeos de um canal falham, aparece "Nenhum clipe disponível neste canal" (no `?player=fake`, aperte "Erro" até esgotar o canal). Para simular falta de internet, use DevTools → Network → Offline: aparece "Sem conexão com a internet" e, ao voltar a rede, o clipe atual recomeça sozinho.
 - **Catálogo:** `web/public/catalog.json` é um catálogo de exemplo. O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
 - O app não faz nenhuma requisição ao site original do catálogo: a CSP do `index.html` só libera o próprio app e o player do YouTube, e um teste falha se o código citar o domínio.
 
