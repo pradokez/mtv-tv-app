@@ -37,8 +37,35 @@ describe("map", () => {
     });
   });
 
-  // Zapping and the guide arrive with #5 and #9.
-  it.each(["ArrowUp", "ChannelUp", "a"])("maps %s to none for now", (key) => {
+  describe("zapping", () => {
+    it.each(["none", "info"] as const)("works with overlay %s", (overlay) => {
+      for (const key of ["ArrowUp", "ChannelUp", "PageUp"]) {
+        expect(map({ key }, state(overlay))).toEqual({ type: "channelUp" });
+      }
+      for (const key of ["ArrowDown", "ChannelDown", "PageDown"]) {
+        expect(map({ key }, state(overlay))).toEqual({ type: "channelDown" });
+      }
+    });
+
+    it.each(["guide", "exitConfirm"] as const)("is left to the %s overlay", (overlay) => {
+      for (const key of ["ArrowUp", "ArrowDown", "ChannelUp", "ChannelDown"]) {
+        expect(map({ key }, state(overlay))).toEqual({ type: "none" });
+      }
+    });
+  });
+
+  describe("skip (ArrowRight)", () => {
+    it.each(["none", "info"] as const)("skips in queue mode with overlay %s", (overlay) => {
+      expect(map({ key: "ArrowRight" }, state(overlay))).toEqual({ type: "skip" });
+    });
+
+    it("does nothing in live mode", () => {
+      expect(map({ key: "ArrowRight" }, { overlay: "none", mode: "live" })).toEqual({ type: "none" });
+    });
+  });
+
+  // The guide arrives with #9.
+  it.each(["a"])("maps %s to none", (key) => {
     expect(map({ key }, state("none"))).toEqual({ type: "none" });
   });
 });
