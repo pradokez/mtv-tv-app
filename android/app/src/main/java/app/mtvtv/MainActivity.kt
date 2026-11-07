@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -52,6 +53,8 @@ class MainActivity : Activity() {
                 ): WebResourceResponse? = assetLoader.shouldInterceptRequest(request.url)
             }
         }
+        // "Sair" da confirmação de saída do app web: window.MtvTv.exitApp().
+        webView.addJavascriptInterface(ExitBridge(), "MtvTv")
         setContentView(webView)
 
         webView.loadUrl(START_URL)
@@ -108,6 +111,14 @@ class MainActivity : Activity() {
                 or View.SYSTEM_UI_FLAG_FULLSCREEN
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             )
+    }
+
+    /** Única ação que o app web pode pedir à casca; só fecha a Activity. */
+    private inner class ExitBridge {
+        @JavascriptInterface
+        fun exitApp() {
+            runOnUiThread { finish() }
+        }
     }
 
     private data class KeySpec(val key: String, val code: String, val keyCode: Int)

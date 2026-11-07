@@ -4,8 +4,21 @@ const NONE: Command = { type: "none" };
 
 /**
  * Translates a key press into a command, given the current UI state.
- * The table (arrows, OK, CH+/CH-, Back) is filled in by later slices.
+ * Covers OK and Back; zapping and the guide keys are added by later slices.
  */
-export function map(_event: KeyInput, _ui: UiState): Command {
-  return NONE;
+export function map(event: KeyInput, ui: UiState): Command {
+  switch (event.key) {
+    case "Escape":
+    case "GoBack":
+      return { type: "back" };
+    case "Enter":
+      if (ui.overlay === "guide") return { type: "guideSelect" };
+      if (ui.overlay === "exitConfirm") return { type: "exitSelect" };
+      return { type: "showInfo" };
+    case "ArrowLeft":
+    case "ArrowRight":
+      return ui.overlay === "exitConfirm" ? { type: "exitMove" } : NONE;
+    default:
+      return NONE;
+  }
 }

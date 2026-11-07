@@ -2,7 +2,7 @@ import type { Catalog } from "../catalog/catalog";
 import type { ChannelSnapshot } from "../catalog/schema";
 import type { Clock } from "../lib/clock";
 import type { Random } from "../lib/random";
-import type { PlayerAdapter } from "../player/player";
+import { createEmitter, type PlayerAdapter, type Unsubscribe } from "../player/player";
 
 export interface TunerDeps {
   catalog: Catalog;
@@ -30,17 +30,23 @@ export interface Tuner {
   /** `videoId` failed to play: if it is the current one, move on to the next. */
   onError(videoId: string): void;
   current(): NowPlaying | undefined;
+  /** Called each time a clip starts: on tuning and when the next one begins. */
+  onNowPlaying(listener: (nowPlaying: NowPlaying) => void): Unsubscribe;
 }
 
 export function createTuner({ catalog, player }: TunerDeps): Tuner {
   let channel: ChannelSnapshot | undefined;
   let index = 0;
 
+  const started = createEmitter<[nowPlaying: NowPlaying]>();
+
   const currentVideoId = () => channel?.videoIds[index];
 
   const play = () => {
     const videoId = currentVideoId();
-    if (videoId) player.load(videoId, 0);
+    if (!channel || !videoId) return;
+    player.load(videoId, 0);
+    started.emit({ channelId: channel.id, videoId });
   };
 
   const advance = () => {
@@ -61,6 +67,7 @@ export function createTuner({ catalog, player }: TunerDeps): Tuner {
     onError(videoId) {
       if (videoId === currentVideoId()) advance();
     },
+    onNowPlaying: (listener) => started.on(listener),
     current() {
       const videoId = currentVideoId();
       return channel && videoId ? { channelId: channel.id, videoId } : undefined;
