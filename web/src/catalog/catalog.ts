@@ -1,0 +1,82 @@
+import {
+  CATALOG_SCHEMA_VERSION,
+  type ChannelSnapshot,
+  type VideoSnapshot,
+} from "./schema";
+
+export interface Catalog {
+  /** Playable channels, sorted by `order`. Channels with no known video are omitted. */
+  channels(): readonly ChannelSnapshot[];
+  channel(id: string): ChannelSnapshot | undefined;
+  video(id: string): VideoSnapshot | undefined;
+}
+
+/** The snapshot can't be used by this version of the app. */
+export class CatalogError extends Error {
+  override name = "CatalogError";
+}
+
+/**
+ * Validates a snapshot (already JSON-parsed) and builds the query interface.
+ * Throws `CatalogError` when the schema version is incompatible or the shape
+ * is malformed. Video ids without metadata are dropped from their channel.
+ */
+export function parseCatalog(input: unknown): Catalog {
+  const version = isRecord(input) ? input.schemaVersion : undefined;
+  if (version === undefined) {
+    throw new CatalogError(
+      `Catálogo sem versão de esquema; este app entende v${CATALOG_SCHEMA_VERSION}`,
+    );
+  }
+  if (version !== CATALOG_SCHEMA_VERSION) {
+    throw new CatalogError(
+      `Catálogo com esquema v${String(version)}; este app entende v${CATALOG_SCHEMA_VERSION}`,
+    );
+  }
+  const snapshot = input as Record<string, unknown>;
+  if (!isRecord(snapshot.videos)) throw malformed("`videos` deve ser um objeto");
+  if (!Array.isArray(snapshot.channels)) throw malformed("`channels` deve ser uma lista");
+
+  const videosById = new Map(Object.entries(snapshot.videos as Record<string, VideoSnapshot>));
+  const channels = snapshot.channels
+    .map((raw, index) => toChannel(raw, index))
+    .map((c) => ({ ...c, videoIds: c.videoIds.filter((id) => videosById.has(id)) }))
+    .filter((c) => c.videoIds.length > 0)
+    .sort((a, b) => a.order - b.order);
+  const channelsById = new Map(channels.map((c) => [c.id, c]));
+
+  return {
+    channels: () => channels,
+    channel: (id) => channelsById.get(id),
+    video: (id) => videosById.get(id),
+  };
+}
+
+function toChannel(raw: unknown, index: number): ChannelSnapshot {
+  if (
+    !isRecord(raw) ||
+    typeof raw.id !== "string" ||
+    typeof raw.name !== "string" ||
+    typeof raw.icon !== "string" ||
+    typeof raw.order !== "number" ||
+    !Array.isArray(raw.videoIds) ||
+    !raw.videoIds.every((id) => typeof id === "string")
+  ) {
+    throw malformed(`canal na posição ${index} inválido`);
+  }
+  return {
+    id: raw.id,
+    name: raw.name,
+    icon: raw.icon,
+    order: raw.order,
+    videoIds: raw.videoIds as string[],
+  };
+}
+
+function malformed(detail: string): CatalogError {
+  return new CatalogError(`Catálogo malformado: ${detail}`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
