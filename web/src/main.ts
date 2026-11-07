@@ -10,7 +10,7 @@ import { createYouTubePlayer } from "./player/youtube-player";
 import { lowerThirdLines } from "./overlays/lower-third";
 import { createOverlays } from "./overlays/overlays";
 import { mountOverlaysView } from "./overlays/overlays-view";
-import { createTuner } from "./tuner/tuner";
+import { createTuner, type NowPlaying } from "./tuner/tuner";
 
 async function main(): Promise<void> {
   const stage = document.getElementById("stage")!;
@@ -26,20 +26,18 @@ async function main(): Promise<void> {
     onExit: () => window.MtvTv?.exitApp(),
     onChange: mountOverlaysView(document.getElementById("overlays")!),
   });
-  tuner.onNowPlaying(({ channelId, videoId }) => {
-    const channel = catalog.channel(channelId);
-    if (channel) overlays.showInfo(lowerThirdLines(catalog.video(videoId), channel.name));
-  });
+  const showLowerThird = (nowPlaying: NowPlaying | undefined) => {
+    const channel = nowPlaying && catalog.channel(nowPlaying.channelId);
+    if (nowPlaying && channel) overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name));
+  };
+  tuner.onNowPlaying(showLowerThird);
   tuner.tune(firstChannel.id);
 
   const dispatch = (command: Command): void => {
     switch (command.type) {
-      case "showInfo": {
-        const now = tuner.current();
-        const channel = now && catalog.channel(now.channelId);
-        if (now && channel) overlays.showInfo(lowerThirdLines(catalog.video(now.videoId), channel.name));
+      case "showInfo":
+        showLowerThird(tuner.current());
         break;
-      }
       case "back":
         overlays.back();
         break;
