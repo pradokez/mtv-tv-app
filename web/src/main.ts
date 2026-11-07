@@ -26,7 +26,6 @@ async function main(): Promise<void> {
     player,
     clock: systemClock,
     random: mathRandom,
-    onTuned: (channelId) => preferences.setLastChannel(channelId),
   });
 
   const overlays = createOverlays({
@@ -39,6 +38,7 @@ async function main(): Promise<void> {
     if (nowPlaying && channel) overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name));
   };
   tuner.onNowPlaying(showLowerThird);
+  tuner.onNowPlaying(({ channelId }) => preferences.setLastChannel(channelId));
   const last = preferences.lastChannel();
   tuner.tune(last && catalog.channel(last) ? last : defaultChannel.id);
 

@@ -14,8 +14,6 @@ export interface TunerDeps {
   clock: Clock;
   /** Seeds the shuffled queue of each channel (once per session). */
   random: Random;
-  /** Called whenever a channel's video actually loads (not on every zapping step). */
-  onTuned?: (channelId: string) => void;
 }
 
 export interface NowPlaying {
@@ -42,7 +40,10 @@ export interface Tuner {
   /** `videoId` failed to play: if it is the current one, move on to the next. */
   onError(videoId: string): void;
   current(): NowPlaying | undefined;
-  /** Called each time a clip starts: on tuning and when the next one begins. */
+  /**
+   * Called each time a clip starts: on tuning, when the next one begins and
+   * when zapping or skipping settles (never on each intermediate step).
+   */
   onNowPlaying(listener: (nowPlaying: NowPlaying) => void): Unsubscribe;
 }
 
@@ -53,7 +54,7 @@ interface Pending {
   videoId?: string;
 }
 
-export function createTuner({ catalog, player, clock, random, onTuned }: TunerDeps): Tuner {
+export function createTuner({ catalog, player, clock, random }: TunerDeps): Tuner {
   const queues = new Map<string, Queue>();
   let channel: ChannelSnapshot | undefined;
   let videoId: string | undefined;
@@ -83,12 +84,10 @@ export function createTuner({ catalog, player, clock, random, onTuned }: TunerDe
   };
 
   const load = (next: ChannelSnapshot, nextVideoId: string) => {
-    const changed = next.id !== channel?.id;
     channel = next;
     videoId = nextVideoId;
     player.load(nextVideoId, 0);
     started.emit({ channelId: next.id, videoId: nextVideoId });
-    if (changed) onTuned?.(next.id);
   };
 
   const settle = () => {

@@ -51,15 +51,8 @@ const orderOf = (channelId: string, n: number) => {
 function setup() {
   const player = new FakePlayer();
   const clock = fakeClock();
-  const tuned: string[] = [];
-  const tuner = createTuner({
-    catalog,
-    player,
-    clock,
-    random: () => 0.5,
-    onTuned: (id) => tuned.push(id),
-  });
-  return { player, clock, tuner, tuned };
+  const tuner = createTuner({ catalog, player, clock, random: () => 0.5 });
+  return { player, clock, tuner };
 }
 
 const loadedIds = (player: FakePlayer) => player.loads.map((l) => l.videoId);
@@ -139,16 +132,6 @@ describe("tuner", () => {
     player.end();
 
     expect(tuner.current()).toEqual({ channelId: "80s", videoId: orderOf("80s", 2)[1] });
-  });
-
-  it("reports each tuned channel to the app", () => {
-    const { tuner, clock, tuned } = setup();
-
-    tuner.tune("80s");
-    tuner.channelUp();
-    clock.advance(ZAP_DEBOUNCE_MS);
-
-    expect(tuned).toEqual(["80s", "90s"]);
   });
 
   describe("zapping", () => {
@@ -309,5 +292,19 @@ describe("onNowPlaying", () => {
     tuner.tune("90s");
     const [first, second] = orderOf("80s", 2);
     expect(seen).toEqual([`80s:${first}`, `80s:${second}`, "90s:x"]);
+  });
+
+  it("fires only once zapping settles, not on each intermediate channel", () => {
+    const { tuner, clock } = setup();
+    tuner.tune("80s");
+    const seen: string[] = [];
+    tuner.onNowPlaying((n) => seen.push(n.channelId));
+
+    tuner.channelUp();
+    tuner.channelUp();
+    expect(seen).toEqual([]);
+    clock.advance(ZAP_DEBOUNCE_MS);
+
+    expect(seen).toEqual(["00s"]);
   });
 });
