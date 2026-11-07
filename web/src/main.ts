@@ -12,16 +12,23 @@ import { lowerThirdLines } from "./overlays/lower-third";
 import { createOverlays } from "./overlays/overlays";
 import { mountOverlaysView } from "./overlays/overlays-view";
 import { createStatusOverlay } from "./overlays/status-overlay";
+import { createPreferences } from "./preferences/preferences";
 import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tuner/tuner";
 
 async function main(): Promise<void> {
   const stage = document.getElementById("stage")!;
   const catalog = await loadCatalog();
-  const firstChannel = catalog.channels()[0];
-  if (!firstChannel) throw new Error("O catálogo não tem nenhum canal com vídeos");
+  const defaultChannel = catalog.channels()[0];
+  if (!defaultChannel) throw new Error("O catálogo não tem nenhum canal com vídeos");
 
   const player = createPlayer(stage);
-  const tuner = createTuner({ catalog, player, clock: systemClock, random: mathRandom });
+  const preferences = createPreferences(window.localStorage);
+  const tuner = createTuner({
+    catalog,
+    player,
+    clock: systemClock,
+    random: mathRandom,
+  });
 
   const overlays = createOverlays({
     clock: systemClock,
@@ -36,7 +43,9 @@ async function main(): Promise<void> {
     if (nowPlaying && channel) overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name));
   };
   tuner.onNowPlaying(showLowerThird);
-  tuner.tune(firstChannel.id);
+  tuner.onNowPlaying(({ channelId }) => preferences.setLastChannel(channelId));
+  const last = preferences.lastChannel();
+  tuner.tune(last && catalog.channel(last) ? last : defaultChannel.id);
 
   const dispatch = (command: Command): void => {
     switch (command.type) {
@@ -52,7 +61,16 @@ async function main(): Promise<void> {
       case "exitSelect":
         overlays.exitSelect();
         break;
-      // Zapping, guide and skip are wired by later slices (#5, #9).
+      case "channelUp":
+        tuner.channelUp();
+        break;
+      case "channelDown":
+        tuner.channelDown();
+        break;
+      case "skip":
+        tuner.skip();
+        break;
+      // The guide is wired by a later slice (#9).
       default:
         break;
     }
@@ -60,7 +78,10 @@ async function main(): Promise<void> {
 
   window.addEventListener("keydown", (event) => {
     const ui: UiState = { overlay: overlays.state().overlay, mode: "queue" };
-    dispatch(map(event, ui));
+    const command = map(event, ui);
+    if (command.type === "none") return;
+    event.preventDefault();
+    dispatch(command);
   });
 
   // Contract with the Android shell: it calls this for every remote key and

@@ -18,7 +18,7 @@ export interface CatalogSnapshotV1 {
 export interface ChannelSnapshot {
   id: string;
   name: string;
-  /** Relative path or URL of the channel icon. */
+  /** Channel icon: an emoji (short text) or a relative path/URL of an image. */
   icon: string;
   /** Position in the channel list (ascending). */
   order: number;

@@ -5,14 +5,14 @@
     {
       "id": "80s",
       "name": "Anos 80",
-      "icon": "icons/80s.svg",
+      "icon": "📼",
       "order": 0,
       "videoIds": ["djV11Xbc914", "W8r-tXRLazs", "dQw4w9WgXcQ"]
     },
     {
       "id": "90s",
       "name": "Anos 90",
-      "icon": "icons/90s.svg",
+      "icon": "💿",
       "order": 1,
       "videoIds": ["hTWKbfoikeg", "HEXWRTEbj1I", "gJLIiF15wjQ"]
     }
