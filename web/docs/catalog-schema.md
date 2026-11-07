@@ -1,6 +1,6 @@
 # Esquema do snapshot do catálogo — v1
 
-O app web lê o catálogo de `catalog.json`, ao lado do `index.html` no build (`web/public/catalog.json` no código-fonte). O arquivo é gerado pelo Catalog Builder. O que vem no repositório é um catálogo de exemplo pequeno.
+O app web lê o catálogo de `catalog.json`, ao lado do `index.html` no build. O snapshot real é gerado pelo Catalog Builder (`pnpm catalog`) em `web/public/catalog.json`, que nunca é commitado. Sem ele, o dev server e o build usam o catálogo de exemplo `web/fixtures/catalog.example.json`.
 
 Os tipos TypeScript em [`src/catalog/schema.ts`](../src/catalog/schema.ts) são a fonte da verdade. Este documento os descreve.
 
@@ -14,7 +14,7 @@ Os tipos TypeScript em [`src/catalog/schema.ts`](../src/catalog/schema.ts) são 
     {
       "id": "80s",                        // único; usado em preferências e na URL
       "name": "Anos 80",                  // exibido no guia e na tarja
-      "icon": "icons/80s.svg",            // caminho relativo ao index.html ou URL
+      "icon": "📼",                         // emoji, ou caminho relativo ao index.html/URL de imagem
       "order": 0,                         // posição na lista de canais (crescente)
       "videoIds": ["djV11Xbc914"]         // IDs do YouTube, na ordem da playlist
     }
