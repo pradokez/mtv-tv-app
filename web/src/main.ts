@@ -22,14 +22,16 @@ async function main(): Promise<void> {
 
   const player = createPlayer(stage);
   const tuner = createTuner({ catalog, player, clock: systemClock, random: mathRandom });
-  showStatus(stage, tuner);
 
   const overlays = createOverlays({
     clock: systemClock,
     onExit: () => window.MtvTv?.exitApp(),
     onChange: mountOverlaysView(document.getElementById("overlays")!),
   });
+  // The lower third would name a clip that is not on screen behind the status message.
+  const status = showStatus(stage, tuner, () => overlays.hideInfo());
   const showLowerThird = (nowPlaying: NowPlaying | undefined) => {
+    if (status.isShown()) return;
     const channel = nowPlaying && catalog.channel(nowPlaying.channelId);
     if (nowPlaying && channel) overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name));
   };
@@ -101,14 +103,20 @@ function createPlayer(stage: HTMLElement): PlayerAdapter {
  * message when offline or when every video of the channel failed. Offline
  * wins: the channel may only look unavailable because there is no network.
  */
-function showStatus(stage: HTMLElement, tuner: Tuner): void {
+function showStatus(stage: HTMLElement, tuner: Tuner, onShow: () => void): { isShown(): boolean } {
   const overlay = createStatusOverlay(stage);
   let online = true;
   let status: TunerStatus = "playing";
+  const message = () => {
+    if (!online) return "Sem conexão com a internet";
+    if (status === "unavailable") return "Nenhum clipe disponível neste canal";
+    return undefined;
+  };
   const render = () => {
-    if (!online) overlay.show("Sem conexão com a internet");
-    else if (status === "unavailable") overlay.show("Nenhum clipe disponível neste canal");
-    else overlay.hide();
+    const text = message();
+    if (text === undefined) return overlay.hide();
+    overlay.show(text);
+    onShow();
   };
   tuner.onStatus((next) => {
     status = next;
@@ -119,6 +127,7 @@ function showStatus(stage: HTMLElement, tuner: Tuner): void {
     tuner.setOnline(next);
     render();
   });
+  return { isShown: () => message() !== undefined };
 }
 
 function showFatal(error: unknown): void {
