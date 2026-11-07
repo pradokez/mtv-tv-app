@@ -4,9 +4,12 @@ const NONE: Command = { type: "none" };
 
 /**
  * Translates a key press into a command, given the current UI state.
- * Covers OK and Back; zapping and the guide keys are added by later slices.
+ * Covers OK, Back and zapping (arrows, CH+/CH-, PageUp/PageDown as their Mac
+ * equivalent) plus skip; the guide keys are added by a later slice. Zapping
+ * keeps working under the lower third, which opens on every channel change.
  */
 export function map(event: KeyInput, ui: UiState): Command {
+  const zappable = ui.overlay === "none" || ui.overlay === "info";
   switch (event.key) {
     case "Escape":
     case "GoBack":
@@ -15,9 +18,19 @@ export function map(event: KeyInput, ui: UiState): Command {
       if (ui.overlay === "guide") return { type: "guideSelect" };
       if (ui.overlay === "exitConfirm") return { type: "exitSelect" };
       return { type: "showInfo" };
+    case "ArrowUp":
+    case "ChannelUp":
+    case "PageUp":
+      return zappable ? { type: "channelUp" } : NONE;
+    case "ArrowDown":
+    case "ChannelDown":
+    case "PageDown":
+      return zappable ? { type: "channelDown" } : NONE;
     case "ArrowLeft":
-    case "ArrowRight":
       return ui.overlay === "exitConfirm" ? { type: "exitMove" } : NONE;
+    case "ArrowRight":
+      if (ui.overlay === "exitConfirm") return { type: "exitMove" };
+      return zappable && ui.mode === "queue" ? { type: "skip" } : NONE;
     default:
       return NONE;
   }
