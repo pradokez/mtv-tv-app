@@ -21,10 +21,14 @@ export interface NowPlaying {
   videoId: string;
 }
 
+/** `unavailable`: every video of the tuned channel failed this session, so nothing plays. */
+export type TunerStatus = "playing" | "unavailable";
+
 /**
  * Decides what plays: which video of which channel. Each channel plays a
  * shuffled queue that is remembered for the session, so coming back to a
- * channel continues where its queue left off.
+ * channel continues where its queue left off. Videos that failed are never
+ * tried again in the session, on any channel.
  */
 export interface Tuner {
   /** Switches to a channel right away. Throws for unknown ids. */
@@ -37,9 +41,17 @@ export interface Tuner {
   skip(): void;
   /** The current video ended: play the next one. */
   onEnded(): void;
-  /** `videoId` failed to play: if it is the current one, move on to the next. */
+  /** `videoId` failed to play: if it is the current one, never try it again and move on. */
   onError(videoId: string): void;
+  /** `undefined` before tuning and while the channel is unavailable. */
   current(): NowPlaying | undefined;
+  /**
+   * Connection state. Offline, errors are ignored (no network is not the
+   * video's fault); back online, the current video reloads from the start.
+   */
+  setOnline(online: boolean): void;
+  /** Called when the status changes. */
+  onStatus(listener: (status: TunerStatus) => void): Unsubscribe;
   /**
    * Called each time a clip starts: on tuning, when the next one begins and
    * when zapping or skipping settles (never on each intermediate step).
@@ -60,7 +72,18 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
   let videoId: string | undefined;
   let pending: Pending | undefined;
   let timer: TimerId | undefined;
+  let status: TunerStatus | undefined;
+  let online = true;
+  /** Videos that failed to play this session; never tried again, on any channel. */
+  const bad = new Set<string>();
   const started = createEmitter<[nowPlaying: NowPlaying]>();
+  const statusChanged = createEmitter<[status: TunerStatus]>();
+
+  const setStatus = (next: TunerStatus) => {
+    if (next === status) return;
+    status = next;
+    statusChanged.emit(next);
+  };
 
   const queueOf = (target: ChannelSnapshot): Queue => {
     let queue = queues.get(target.id);
@@ -83,10 +106,25 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
     pending = undefined;
   };
 
-  const load = (next: ChannelSnapshot, nextVideoId: string) => {
+  /**
+   * Next video of the channel's queue that has not failed, or `undefined` when
+   * all of them have. `drawn` is a clip already taken from the queue (by a skip).
+   */
+  const nextPlayable = (target: ChannelSnapshot, drawn?: string): string | undefined => {
+    if (target.videoIds.every((id) => bad.has(id))) return undefined;
+    const queue = queueOf(target);
+    let next = drawn ?? queue.next();
+    // Ends: at least one video of the channel is still playable.
+    while (bad.has(next)) next = queue.next();
+    return next;
+  };
+
+  const load = (next: ChannelSnapshot, nextVideoId: string | undefined) => {
     channel = next;
     videoId = nextVideoId;
+    if (!nextVideoId) return setStatus("unavailable");
     player.load(nextVideoId, 0);
+    setStatus("playing");
     started.emit({ channelId: next.id, videoId: nextVideoId });
   };
 
@@ -95,7 +133,7 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
     cancelPending();
     if (!target) return;
     const next = lookup(target.channelId);
-    load(next, target.videoId ?? queueOf(next).next());
+    load(next, nextPlayable(next, target.videoId));
   };
 
   const schedule = (next: Pending) => {
@@ -114,15 +152,14 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
   };
 
   const advance = () => {
-    if (!channel) return;
-    load(channel, queueOf(channel).next());
+    if (channel && videoId) load(channel, nextPlayable(channel));
   };
 
   const tuner: Tuner = {
     tune(channelId) {
       const next = lookup(channelId);
       cancelPending();
-      load(next, queueOf(next).next());
+      load(next, nextPlayable(next));
     },
     channelUp: () => zap(1),
     channelDown: () => zap(-1),
@@ -138,12 +175,20 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
       if (!pending) advance();
     },
     onError(failedVideoId) {
-      if (!pending && failedVideoId === videoId) advance();
+      if (!online || pending || failedVideoId !== videoId) return;
+      bad.add(failedVideoId);
+      advance();
     },
     onNowPlaying: (listener) => started.on(listener),
     current() {
       return channel && videoId ? { channelId: channel.id, videoId } : undefined;
     },
+    setOnline(next) {
+      const reconnected = next && !online;
+      online = next;
+      if (reconnected && videoId) player.load(videoId, 0);
+    },
+    onStatus: (listener) => statusChanged.on(listener),
   };
 
   player.onEnded(() => tuner.onEnded());

@@ -3,6 +3,7 @@ import { parseCatalog, type Catalog } from "./catalog/catalog";
 import type { Command, UiState } from "./input/commands";
 import { map } from "./input/input-mapper";
 import { systemClock } from "./lib/clock";
+import { watchConnectivity } from "./lib/connectivity";
 import { mathRandom } from "./lib/random";
 import { FakePlayer, mountFakePlayerView } from "./player/fake-player";
 import type { PlayerAdapter } from "./player/player";
@@ -10,8 +11,9 @@ import { createYouTubePlayer } from "./player/youtube-player";
 import { lowerThirdLines } from "./overlays/lower-third";
 import { createOverlays } from "./overlays/overlays";
 import { mountOverlaysView } from "./overlays/overlays-view";
+import { createStatusOverlay } from "./overlays/status-overlay";
 import { createPreferences } from "./preferences/preferences";
-import { createTuner, type NowPlaying } from "./tuner/tuner";
+import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tuner/tuner";
 
 async function main(): Promise<void> {
   const stage = document.getElementById("stage")!;
@@ -33,7 +35,10 @@ async function main(): Promise<void> {
     onExit: () => window.MtvTv?.exitApp(),
     onChange: mountOverlaysView(document.getElementById("overlays")!),
   });
+  // The lower third would name a clip that is not on screen behind the status message.
+  const status = showStatus(stage, tuner, () => overlays.hideInfo());
   const showLowerThird = (nowPlaying: NowPlaying | undefined) => {
+    if (status.isShown()) return;
     const channel = nowPlaying && catalog.channel(nowPlaying.channelId);
     if (nowPlaying && channel) overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name));
   };
@@ -112,6 +117,38 @@ function createPlayer(stage: HTMLElement): PlayerAdapter {
   const fake = new FakePlayer();
   mountFakePlayerView(stage, fake);
   return fake;
+}
+
+/**
+ * Keeps the Tuner informed of the connection and covers the player with a
+ * message when offline or when every video of the channel failed. Offline
+ * wins: the channel may only look unavailable because there is no network.
+ */
+function showStatus(stage: HTMLElement, tuner: Tuner, onShow: () => void): { isShown(): boolean } {
+  const overlay = createStatusOverlay(stage);
+  let online = true;
+  let status: TunerStatus = "playing";
+  const message = () => {
+    if (!online) return "Sem conexão com a internet";
+    if (status === "unavailable") return "Nenhum clipe disponível neste canal";
+    return undefined;
+  };
+  const render = () => {
+    const text = message();
+    if (text === undefined) return overlay.hide();
+    overlay.show(text);
+    onShow();
+  };
+  tuner.onStatus((next) => {
+    status = next;
+    render();
+  });
+  watchConnectivity((next) => {
+    online = next;
+    tuner.setOnline(next);
+    render();
+  });
+  return { isShown: () => message() !== undefined };
 }
 
 function showFatal(error: unknown): void {

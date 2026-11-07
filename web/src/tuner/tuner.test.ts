@@ -48,10 +48,10 @@ const orderOf = (channelId: string, n: number) => {
   return Array.from({ length: n }, () => queue.next());
 };
 
-function setup() {
+function setup(fromCatalog = catalog) {
   const player = new FakePlayer();
   const clock = fakeClock();
-  const tuner = createTuner({ catalog, player, clock, random: () => 0.5 });
+  const tuner = createTuner({ catalog: fromCatalog, player, clock, random: () => 0.5 });
   return { player, clock, tuner };
 }
 
@@ -306,5 +306,145 @@ describe("onNowPlaying", () => {
     clock.advance(ZAP_DEBOUNCE_MS);
 
     expect(seen).toEqual(["00s"]);
+  });
+});
+
+describe("failed videos", () => {
+  it("never plays a failed video again on that channel", () => {
+    const { player, tuner } = setup();
+    tuner.tune("80s");
+    const [failed] = orderOf("80s", 1);
+
+    player.fail();
+    for (let i = 0; i < 6; i++) player.end();
+
+    expect(loadedIds(player)).toHaveLength(8);
+    expect(loadedIds(player).slice(1)).not.toContain(failed);
+  });
+
+  it("skips a failed video on any channel that has it", () => {
+    const shared = parseCatalog({
+      schemaVersion: 1,
+      channels: [
+        { id: "one", name: "One", icon: "", order: 0, videoIds: ["s"] },
+        { id: "two", name: "Two", icon: "", order: 1, videoIds: ["s", "t"] },
+      ],
+      videos: { s: {}, t: {} },
+    });
+    const { player, tuner } = setup(shared);
+    tuner.tune("one");
+    player.fail();
+
+    for (let i = 0; i < 4; i++) tuner.tune("two");
+
+    expect(loadedIds(player)).toEqual(["s", "t", "t", "t", "t"]);
+  });
+
+  it("does not land on a failed video drawn by a skip", () => {
+    const { player, tuner, clock } = setup();
+    tuner.tune("00s");
+    const [failed, other] = orderOf("00s", 2);
+    player.fail();
+
+    tuner.skip();
+    clock.advance(ZAP_DEBOUNCE_MS);
+
+    expect(loadedIds(player)).toEqual([failed, other, other]);
+  });
+
+  describe("channel with every video failed", () => {
+    it("stops loading and reports the channel unavailable", () => {
+      const { player, tuner } = setup();
+      const statuses: string[] = [];
+      tuner.onStatus((status) => statuses.push(status));
+      tuner.tune("90s");
+
+      player.fail();
+      player.end();
+
+      expect(loadedIds(player)).toEqual(["x"]);
+      expect(statuses).toEqual(["playing", "unavailable"]);
+      expect(tuner.current()).toBeUndefined();
+    });
+
+    it("plays again after zapping away from it", () => {
+      const { player, tuner, clock } = setup();
+      const statuses: string[] = [];
+      tuner.onStatus((status) => statuses.push(status));
+      tuner.tune("90s");
+      player.fail();
+
+      tuner.channelUp();
+      clock.advance(ZAP_DEBOUNCE_MS);
+
+      expect(loadedIds(player)).toEqual(["x", orderOf("00s", 1)[0]]);
+      expect(statuses).toEqual(["playing", "unavailable", "playing"]);
+    });
+
+    it("is reported unavailable right away when tuned to again", () => {
+      const { player, tuner } = setup();
+      tuner.tune("90s");
+      player.fail();
+      tuner.tune("80s");
+      const statuses: string[] = [];
+      const started: string[] = [];
+      tuner.onStatus((status) => statuses.push(status));
+      tuner.onNowPlaying((n) => started.push(n.videoId));
+
+      tuner.tune("90s");
+
+      expect(loadedIds(player)).toEqual(["x", orderOf("80s", 1)[0]]);
+      expect(statuses).toEqual(["unavailable"]);
+      expect(started).toEqual([]);
+    });
+  });
+});
+
+describe("connection", () => {
+  it("neither marks nor skips a video that fails while offline", () => {
+    const { player, tuner } = setup();
+    tuner.tune("80s");
+    const playing = tuner.current();
+
+    tuner.setOnline(false);
+    player.fail();
+
+    expect(player.loads).toHaveLength(1);
+    expect(tuner.current()).toEqual(playing);
+  });
+
+  it("reloads the current video from the start when the connection comes back", () => {
+    const { player, tuner } = setup();
+    tuner.tune("80s");
+    tuner.setOnline(false);
+    player.fail();
+
+    tuner.setOnline(true);
+
+    const [first] = orderOf("80s", 1);
+    expect(player.loads).toEqual([
+      { videoId: first, startSec: 0 },
+      { videoId: first, startSec: 0 },
+    ]);
+  });
+
+  it("does not reload when told it is online without having been offline", () => {
+    const { player, tuner } = setup();
+    tuner.tune("80s");
+
+    tuner.setOnline(true);
+
+    expect(player.loads).toHaveLength(1);
+  });
+
+  it("does not reload anything when the connection comes back on an unavailable channel", () => {
+    const { player, tuner } = setup();
+    tuner.tune("90s");
+    player.fail();
+    tuner.setOnline(false);
+
+    tuner.setOnline(true);
+
+    expect(loadedIds(player)).toEqual(["x"]);
   });
 });

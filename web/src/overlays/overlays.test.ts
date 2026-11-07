@@ -41,6 +41,24 @@ describe("overlays", () => {
     expect(setup().overlays.state().overlay).toBe("none");
   });
 
+  it("hides the lower third on demand", () => {
+    const { overlays } = setup();
+    overlays.showInfo(lines);
+
+    overlays.hideInfo();
+
+    expect(overlays.state().overlay).toBe("none");
+  });
+
+  it("leaves the exit confirmation open when asked to hide the lower third", () => {
+    const { overlays } = setup();
+    overlays.back();
+
+    overlays.hideInfo();
+
+    expect(overlays.state().overlay).toBe("exitConfirm");
+  });
+
   it("shows the lower third and hides it by itself", () => {
     const { overlays, advance } = setup();
     overlays.showInfo(lines);

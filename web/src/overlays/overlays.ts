@@ -26,6 +26,8 @@ export interface Overlays {
   state(): OverlayState;
   /** Shows the lower third, unless the exit confirmation is open. */
   showInfo(lines: readonly string[]): void;
+  /** Hides the lower third if it is showing; any other overlay stays open. */
+  hideInfo(): void;
   /** Closes the open overlay; with none open, asks to exit. */
   back(): void;
   exitMove(): void;
@@ -58,6 +60,9 @@ export function createOverlays({ clock, onExit, onChange }: OverlaysDeps): Overl
       clearTimer();
       set({ overlay: "info", lines });
       hideTimer = clock.setTimeout(close, INFO_DURATION_MS);
+    },
+    hideInfo() {
+      if (state.overlay === "info") close();
     },
     back() {
       if (state.overlay === "none") {
