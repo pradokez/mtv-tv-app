@@ -79,9 +79,12 @@ describe("parseCatalog", () => {
 
     const catalog = parseCatalog(sample);
 
+    // Nothing was dropped: every channel and video id in the file is usable.
+    expect(catalog.channels()).toHaveLength(sample.channels.length);
     expect(catalog.channels().length).toBeGreaterThan(0);
-    for (const channel of catalog.channels()) {
-      expect(channel.videoIds).toEqual(sample.channels.find((c: { id: string }) => c.id === channel.id).videoIds);
+    for (const channel of sample.channels) {
+      expect(catalog.channel(channel.id)?.videoIds).toEqual(channel.videoIds);
+      for (const id of channel.videoIds) expect(catalog.video(id)).toBeDefined();
     }
   });
 });
