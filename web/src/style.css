@@ -70,3 +70,77 @@ body {
   font: inherit;
   padding: 0.5rem 1.5rem;
 }
+
+/*
+ * Overlays. Everything stays inside the TV safe area (5% margins) and is sized
+ * to read from 3 m. The lower third has no box: white text with a dark outline
+ * and shadow so it reads over bright and dark video alike.
+ */
+#overlays {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#overlays [hidden] {
+  display: none;
+}
+
+.lower-third {
+  position: absolute;
+  left: 5%;
+  bottom: 5%;
+  max-width: 60%;
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0 3px 12px #000;
+}
+
+.lower-third p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.exit-confirm {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 2rem;
+  background: rgb(0 0 0 / 0.7);
+  text-align: center;
+  font-size: 2.5rem;
+}
+
+.exit-confirm p {
+  margin: 0;
+}
+
+.exit-confirm div {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+}
+
+.exit-option {
+  padding: 0.6rem 2.5rem;
+  border: 4px solid #fff;
+  border-radius: 0.5rem;
+}
+
+.exit-option.selected {
+  background: #fff;
+  color: #000;
+}
