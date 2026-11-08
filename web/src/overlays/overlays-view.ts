@@ -1,11 +1,11 @@
 import type { Clock, TimerId } from "../lib/clock";
-import type { GuideRow } from "./guide";
+import { guideSection, type GuideRow } from "./guide";
 import type { GuideOnAir } from "./on-air";
 import type { OverlayState } from "./overlays";
 
 export interface OverlaysViewDeps {
   clock: Clock;
-  /** What is on air in a channel right now; `undefined` when the guide shows no "now on air" (queue mode). */
+  /** What is on air in a channel right now, for the columns of the guide in live mode. */
   onAir?: (channelId: string, nowMs: number) => GuideOnAir | undefined;
 }
 
@@ -85,7 +85,7 @@ function option(label: string): HTMLElement {
 
 /**
  * The guide is a panel on the left. Rows are rebuilt only when the row list
- * changes (a favorite toggled); moving the focus just flips a class, so
+ * changes (a favorite or a setting toggled); moving the focus just flips a class, so
  * scrolling through 113 channels stays cheap on the TV. The "now on air" text
  * is only computed for the rows around the focus, and again when the first of
  * those clips ends.
@@ -95,10 +95,19 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
   el.className = "guide";
   el.setAttribute("aria-label", "Guia de canais");
   el.hidden = true;
+  const columns = document.createElement("div");
+  columns.className = "guide-columns";
+  columns.hidden = true;
+  columns.append(span("", "Canal"), span("", "Agora no ar"), span("", "A seguir"));
   const list = document.createElement("ul");
-  el.append(list);
+  const hint = document.createElement("div");
+  hint.className = "guide-hint";
+  hint.append(span("", "▲▼ mover"), span("", "OK escolher"), span("", "► favoritar"), span("", "VOLTAR fechar"));
+  el.append(columns, list, hint);
 
   let shownRows: readonly GuideRow[] | undefined;
+  /** Live mode: the rows have "now on air" columns. The queue has no grid, so it only lists channels. */
+  let live = false;
   let items: HTMLElement[] = [];
   let focused: HTMLElement | undefined;
   let refreshTimer: TimerId | undefined;
@@ -114,19 +123,20 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
   /** Fills the "now on air" of the rows around the focus; returns when the first of those clips ends. */
   const fillOnAir = (now: number): number => {
     let nextEnd = Infinity;
-    if (!deps?.onAir || !shownRows) return nextEnd;
+    if (!live || !deps?.onAir || !shownRows) return nextEnd;
     const from = Math.max(0, focusIndex - ON_AIR_WINDOW);
     const to = Math.min(shownRows.length, focusIndex + ON_AIR_WINDOW + 1);
     for (let i = from; i < to; i++) {
       const row = shownRows[i]!;
-      const target = items[i]?.querySelector<HTMLElement>(".guide-onair");
-      if (row.kind !== "channel" || !target) continue;
+      const item = items[i];
+      if (row.kind !== "channel" || !item) continue;
       // Rows already filled with a clip that is still on air stay as they are:
       // moving the focus then only fills the row that just entered the window.
       let endsAt = filledUntil.get(i);
       if (endsAt === undefined || endsAt <= now) {
         const info = deps.onAir(row.id, now);
-        target.replaceChildren(...onAirLines(info));
+        item.querySelector(".guide-now")!.textContent = info?.now ?? "";
+        item.querySelector(".guide-next")!.textContent = info?.next ?? "";
         endsAt = info?.endsAtMs ?? Infinity;
         filledUntil.set(i, endsAt);
       }
@@ -139,8 +149,6 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
     stopRefresh();
     const now = deps?.clock.now() ?? 0;
     const nextEnd = fillOnAir(now);
-    // Scroll only after filling: the "now on air" lines change the height of
-    // the rows above the focus, which would otherwise push it out of view.
     focused?.scrollIntoView({ block: "nearest" });
     if (deps && nextEnd < Infinity) {
       refreshTimer = deps.clock.setTimeout(refreshOnAir, Math.max(nextEnd - now, 0) + REFRESH_SLACK_MS);
@@ -156,12 +164,20 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
         stopRefresh();
         return;
       }
-      const { rows, focus } = state.guide;
+      const { rows, focus, tunedId } = state.guide;
       let stale = false;
       if (rows !== shownRows) {
         shownRows = rows;
-        items = rows.map(guideItem);
-        list.replaceChildren(...items);
+        live = rows.some((row) => row.kind === "mode" && row.mode === "live");
+        el.classList.toggle("guide-live", live);
+        columns.hidden = !live;
+        items = rows.map((row) => guideItem(row, live, tunedId));
+        list.replaceChildren(
+          ...rows.flatMap((row, i) => {
+            const section = guideSection(row, rows[i - 1]);
+            return section ? [sectionTitle(section), items[i]!] : [items[i]!];
+          }),
+        );
         filledUntil.clear();
         focused = undefined;
         stale = true;
@@ -178,22 +194,35 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
   };
 }
 
-function guideItem(row: GuideRow): HTMLElement {
+function settingItem(label: string, value: string): HTMLElement {
   const li = document.createElement("li");
+  li.className = "guide-row guide-setting";
+  li.append(span("guide-name", label), span("guide-value", value));
+  return li;
+}
+
+function sectionTitle(text: string): HTMLElement {
+  const li = document.createElement("li");
+  li.className = "guide-section";
+  li.textContent = text;
+  return li;
+}
+
+function span(className: string, text = ""): HTMLElement {
+  const el = document.createElement("span");
+  el.className = className;
+  el.textContent = text;
+  return el;
+}
+
+function guideItem(row: GuideRow, live: boolean, tunedId: string | undefined): HTMLElement {
+  if (row.kind === "mode") return settingItem("Modo", row.mode === "live" ? "Ao vivo" : "Fila");
   if (row.kind === "filter") {
-    li.className = "guide-row guide-filter";
-    const label = document.createElement("span");
-    label.className = "guide-name";
-    label.textContent = "Só favoritos";
-    const value = document.createElement("span");
-    value.className = "guide-value";
-    value.textContent = row.ignored ? "Ligado, sem favoritos: ignorado" : row.on ? "Ligado" : "Desligado";
-    li.append(label, value);
-    return li;
+    return settingItem("Só favoritos ao zapear", row.ignored ? "Sem favoritos" : row.on ? "Ligado" : "Desligado");
   }
-  li.className = "guide-row";
-  const icon = document.createElement("span");
-  icon.className = "guide-icon";
+  const li = document.createElement("li");
+  li.className = row.id === tunedId ? "guide-row tuned" : "guide-row";
+  const icon = span("guide-icon");
   if (/^(\/|\.|https?:)/.test(row.icon)) {
     const img = document.createElement("img");
     img.src = row.icon;
@@ -202,30 +231,10 @@ function guideItem(row: GuideRow): HTMLElement {
   } else {
     icon.textContent = row.icon;
   }
-  const text = document.createElement("span");
-  text.className = "guide-text";
-  const name = document.createElement("span");
-  name.className = "guide-name";
-  name.textContent = row.name;
-  const onAir = document.createElement("span");
-  onAir.className = "guide-onair";
-  text.append(name, onAir);
-  const star = document.createElement("span");
-  star.className = "guide-star";
-  star.textContent = row.favorite ? "★" : "";
-  li.append(icon, text, star);
+  const channel = span("guide-channel");
+  channel.append(icon, span("guide-name", row.name), span("guide-dot"));
+  li.append(channel);
+  if (live) li.append(span("guide-now"), span("guide-next"));
+  li.append(span(row.favorite ? "guide-star" : "guide-star off", row.favorite ? "★" : "☆"));
   return li;
-}
-
-function onAirLines(info: GuideOnAir | undefined): HTMLElement[] {
-  const line = (className: string, text: string) => {
-    const el = document.createElement("span");
-    el.className = className;
-    el.textContent = text;
-    return el;
-  };
-  const lines: HTMLElement[] = [];
-  if (info?.now) lines.push(line("guide-now", info.now));
-  if (info?.next) lines.push(line("guide-next", `A seguir: ${info.next}`));
-  return lines;
 }

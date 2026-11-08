@@ -149,7 +149,7 @@ describe("overlays", () => {
 
   describe("guide", () => {
     const channels = ["a", "b", "c"].map((id, order) => ({ id, name: id, icon: "", order, videoIds: ["v"] }));
-    const rows = guideRows(channels, [], false);
+    const rows = guideRows(channels, [], false, "live");
     const focusedId = (o: ReturnType<typeof setup>["overlays"]) => {
       const row = o.guideFocused();
       return row?.kind === "channel" ? row.id : row?.kind;
@@ -186,17 +186,46 @@ describe("overlays", () => {
       overlays.guideMove(-1);
       overlays.guideMove(-1);
       overlays.guideMove(-1);
-      expect(focusedId(overlays)).toBe("filter");
+      expect(focusedId(overlays)).toBe("mode");
+    });
+
+    it("starts on the first channel when the current one is not in the guide", () => {
+      const { overlays } = setup();
+
+      overlays.openGuide(rows, "gone");
+
+      expect(focusedId(overlays)).toBe("a");
+    });
+
+    it("remembers the tuned channel to mark it in the list", () => {
+      const { overlays } = setup();
+
+      overlays.openGuide(rows, "b");
+      overlays.guideMove(1);
+
+      expect(overlays.state().guide.tunedId).toBe("b");
     });
 
     it("keeps the focus on the same channel when favorites reorder the rows", () => {
       const { overlays } = setup();
       overlays.openGuide(rows, "c");
 
-      overlays.setGuideRows(guideRows(channels, ["c"], false));
+      overlays.setGuideRows(guideRows(channels, ["c"], false, "live"));
 
       expect(focusedId(overlays)).toBe("c");
-      expect(overlays.state().guide.focus).toBe(1);
+      expect(overlays.state().guide.focus).toBe(2);
+    });
+
+    it("keeps the focus on the setting and the tuned channel when a setting changes the rows", () => {
+      const { overlays } = setup();
+      overlays.openGuide(rows, "a");
+      overlays.guideMove(-1);
+      overlays.guideMove(-1);
+
+      overlays.setGuideRows(guideRows(channels, [], false, "queue"));
+
+      expect(focusedId(overlays)).toBe("mode");
+      expect(overlays.state().guide.tunedId).toBe("a");
     });
 
     it("closes with Back", () => {

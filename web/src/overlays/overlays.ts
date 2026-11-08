@@ -15,8 +15,8 @@ export interface OverlayState {
   lines: readonly string[];
   /** Highlighted option while `overlay` is `exitConfirm`. */
   exitChoice: ExitChoice;
-  /** Rows of the guide and the index of the focused one, while `overlay` is `guide`. */
-  guide: { rows: readonly GuideRow[]; focus: number };
+  /** Rows of the guide, the index of the focused one and the channel on screen, while `overlay` is `guide`. */
+  guide: { rows: readonly GuideRow[]; focus: number; tunedId?: string };
   /** Brief message shown over any overlay, if any. */
   notice?: string;
 }
@@ -113,21 +113,22 @@ export function createOverlays({ clock, onExit, onChange }: OverlaysDeps): Overl
       if (state.overlay === "exitConfirm" || state.overlay === "guide") return;
       clearTimer();
       const at = rows.findIndex((r) => r.kind === "channel" && r.id === focusChannelId);
-      // Row 0 is the favorites-only switch; without a match, start on the first channel.
-      set({ overlay: "guide", guide: { rows, focus: at >= 0 ? at : Math.min(1, rows.length - 1) } });
+      // Without a match, start on the first channel instead of a setting.
+      const focus = at >= 0 ? at : Math.max(0, rows.findIndex((r) => r.kind === "channel"));
+      set({ overlay: "guide", guide: { rows, focus, tunedId: focusChannelId } });
     },
     guideMove(step) {
       if (state.overlay !== "guide") return;
       const { rows, focus } = state.guide;
       const next = Math.max(0, Math.min(rows.length - 1, focus + step));
-      if (next !== focus) set({ guide: { rows, focus: next } });
+      if (next !== focus) set({ guide: { ...state.guide, focus: next } });
     },
     guideFocused: () => (state.overlay === "guide" ? state.guide.rows[state.guide.focus] : undefined),
     setGuideRows(rows) {
       if (state.overlay !== "guide") return;
       const key = rowKey(state.guide.rows[state.guide.focus]);
       const at = rows.findIndex((r) => rowKey(r) === key);
-      set({ guide: { rows, focus: at >= 0 ? at : Math.min(state.guide.focus, rows.length - 1) } });
+      set({ guide: { ...state.guide, rows, focus: at >= 0 ? at : Math.min(state.guide.focus, rows.length - 1) } });
     },
   };
 }

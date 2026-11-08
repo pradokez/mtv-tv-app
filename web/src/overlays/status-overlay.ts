@@ -3,7 +3,7 @@
  * Opaque, so YouTube's own error screen underneath is never seen.
  */
 export interface StatusOverlay {
-  show(message: string): void;
+  show(message: string, hint?: string): void;
   hide(): void;
 }
 
@@ -14,8 +14,14 @@ export function createStatusOverlay(container: HTMLElement): StatusOverlay {
   el.hidden = true;
   container.append(el);
   return {
-    show(message) {
+    show(message, hint) {
       el.textContent = message;
+      if (hint !== undefined) {
+        const line = document.createElement("span");
+        line.className = "status-hint";
+        line.textContent = hint;
+        el.append(line);
+      }
       el.hidden = false;
     },
     hide() {

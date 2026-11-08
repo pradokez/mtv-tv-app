@@ -21,7 +21,7 @@ export type Command =
   | { type: "back" }
   | { type: "guideUp" }
   | { type: "guideDown" }
-  /** Tune to the channel focused in the guide (or flip the favorites-only row). */
+  /** Tune to the channel focused in the guide (or change the focused setting). */
   | { type: "guideSelect" }
   /** Mark or unmark the channel focused in the guide as favorite. */
   | { type: "guideToggle" }

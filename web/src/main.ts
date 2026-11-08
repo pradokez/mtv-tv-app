@@ -17,7 +17,7 @@ import { guideOnAir } from "./overlays/on-air";
 import { createOverlays } from "./overlays/overlays";
 import { mountOverlaysView } from "./overlays/overlays-view";
 import { createStatusOverlay } from "./overlays/status-overlay";
-import { createPreferences } from "./preferences/preferences";
+import { createPreferences, type PlaybackMode } from "./preferences/preferences";
 import { createLiveSchedule } from "./schedule/live-schedule";
 import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tuner/tuner";
 
@@ -44,8 +44,7 @@ async function main(): Promise<void> {
     onExit: () => window.MtvTv?.exitApp(),
     onChange: mountOverlaysView(document.getElementById("overlays")!, {
       clock: systemClock,
-      // The queue has no grid, so the guide only lists channels there.
-      onAir: (channelId, nowMs) => (preferences.mode() === "live" ? guideOnAir(catalog, schedule, channelId, nowMs) : undefined),
+      onAir: (channelId, nowMs) => guideOnAir(catalog, schedule, channelId, nowMs),
     }),
   });
   // The lower third would name a clip that is not on screen behind the status message.
@@ -53,7 +52,10 @@ async function main(): Promise<void> {
   const showLowerThird = (nowPlaying: NowPlaying | undefined) => {
     if (status.isShown()) return;
     const channel = nowPlaying && catalog.channel(nowPlaying.channelId);
-    if (nowPlaying && channel) overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name));
+    if (nowPlaying && channel) {
+      const number = catalog.channels().indexOf(channel) + 1;
+      overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name, number));
+    }
   };
   tuner.onNowPlaying(showLowerThird);
   tuner.onNowPlaying(({ channelId }) => preferences.setLastChannel(channelId));
@@ -63,18 +65,35 @@ async function main(): Promise<void> {
     tuner.setZapFilter(preferences.favoritesOnly() ? favorites : undefined);
   };
   syncZapFilter();
-  const rows = () => guideRows(catalog.channels(), preferences.favorites(), preferences.favoritesOnly());
+  const rows = () => guideRows(catalog.channels(), preferences.favorites(), preferences.favoritesOnly(), tuner.mode());
+  /** Rebuilds the guide after a favorite or the filter changed, warning when the filter has nothing to restrict to. */
+  const favoritesChanged = () => {
+    syncZapFilter();
+    const next = rows();
+    overlays.setGuideRows(next);
+    if (next.some((row) => row.kind === "filter" && row.ignored)) overlays.showNotice("Sem favoritos: mostrando todos os canais");
+  };
+  const toggleMode = (): PlaybackMode => {
+    const next = tuner.mode() === "live" ? "queue" : "live";
+    preferences.setMode(next);
+    tuner.setMode(next);
+    return next;
+  };
   const last = preferences.lastChannel();
   tuner.tune(last && catalog.channel(last) ? last : defaultChannel.id);
 
-  /** OK in the guide: tunes the focused channel and closes, or flips the favorites-only switch. */
+  /** OK in the guide: tunes the focused channel and closes, or changes the focused setting. */
   const selectInGuide = (): void => {
     const row = overlays.guideFocused();
     if (!row) return;
+    if (row.kind === "mode") {
+      toggleMode();
+      overlays.setGuideRows(rows());
+      return;
+    }
     if (row.kind === "filter") {
       preferences.setFavoritesOnly(!preferences.favoritesOnly());
-      syncZapFilter();
-      overlays.setGuideRows(rows());
+      favoritesChanged();
       return;
     }
     overlays.back();
@@ -120,20 +139,15 @@ async function main(): Promise<void> {
         const row = overlays.guideFocused();
         if (row?.kind !== "channel") break;
         preferences.toggleFavorite(row.id);
-        syncZapFilter();
-        overlays.setGuideRows(rows());
+        favoritesChanged();
         break;
       }
       case "skipBlocked":
-        overlays.showNotice("Ao vivo: não dá para pular");
+        overlays.showNotice("Ao vivo não se pula");
         break;
-      case "toggleMode": {
-        const next = tuner.mode() === "live" ? "queue" : "live";
-        preferences.setMode(next);
-        tuner.setMode(next);
-        overlays.showNotice(next === "live" ? "Ao vivo" : "Fila");
+      case "toggleMode":
+        overlays.showNotice(toggleMode() === "live" ? "Ao vivo" : "Fila");
         break;
-      }
       default:
         break;
     }
@@ -192,14 +206,16 @@ function showStatus(stage: HTMLElement, tuner: Tuner, onShow: () => void): { isS
   let online = true;
   let status: TunerStatus = "playing";
   const message = () => {
-    if (!online) return "Sem conexão com a internet";
-    if (status === "unavailable") return "Nenhum clipe disponível neste canal";
+    if (!online) return { text: "Sem conexão com a internet" };
+    if (status === "unavailable") {
+      return { text: "Este canal não tem clipes que possam tocar agora.", hint: "Use ▲ ▼ para trocar de canal" };
+    }
     return undefined;
   };
   const render = () => {
-    const text = message();
-    if (text === undefined) return overlay.hide();
-    overlay.show(text);
+    const shown = message();
+    if (shown === undefined) return overlay.hide();
+    overlay.show(shown.text, shown.hint);
     onShow();
   };
   tuner.onStatus((next) => {
