@@ -97,6 +97,11 @@ body {
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
 }
 
+.status-hint {
+  font-size: 1.5rem;
+  color: var(--cyan);
+}
+
 #fatal {
   align-content: center;
   gap: 1.5rem;

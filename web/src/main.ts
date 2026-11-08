@@ -207,14 +207,16 @@ function showStatus(stage: HTMLElement, tuner: Tuner, onShow: () => void): { isS
   let online = true;
   let status: TunerStatus = "playing";
   const message = () => {
-    if (!online) return "Sem conexão com a internet";
-    if (status === "unavailable") return "Nenhum clipe disponível neste canal";
+    if (!online) return { text: "Sem conexão com a internet" };
+    if (status === "unavailable") {
+      return { text: "Este canal não tem clipes que possam tocar agora.", hint: "Use ▲ ▼ para trocar de canal" };
+    }
     return undefined;
   };
   const render = () => {
-    const text = message();
-    if (text === undefined) return overlay.hide();
-    overlay.show(text);
+    const shown = message();
+    if (shown === undefined) return overlay.hide();
+    overlay.show(shown.text, shown.hint);
     onShow();
   };
   tuner.onStatus((next) => {
