@@ -21,7 +21,7 @@ Os tipos TypeScript em [`src/catalog/schema.ts`](../src/catalog/schema.ts) são 
   ],
   "videos": {
     "djV11Xbc914": {
-      "durationSec": 225,                 // em segundos; sempre presente no snapshot gerado pelo `pnpm catalog`
+      "durationSec": 225,                 // em segundos; sempre presente no snapshot gerado pelo `pnpm catalog`. Vídeo sem duração fica fora da grade ao vivo; canal sem nenhuma toca em modo fila
       "artist": "a-ha",                   // opcional
       "song": "Take On Me",               // opcional
       "title": "a-ha - Take On Me (Official Video)" // opcional: título original do YouTube
