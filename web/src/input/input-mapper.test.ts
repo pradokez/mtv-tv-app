@@ -59,13 +59,25 @@ describe("map", () => {
       expect(map({ key: "ArrowRight" }, state(overlay))).toEqual({ type: "skip" });
     });
 
-    it("does nothing in live mode", () => {
-      expect(map({ key: "ArrowRight" }, { overlay: "none", mode: "live" })).toEqual({ type: "none" });
+    it("reports a blocked skip in live mode", () => {
+      expect(map({ key: "ArrowRight" }, { overlay: "none", mode: "live" })).toEqual({ type: "skipBlocked" });
     });
   });
 
   // The guide arrives with #9.
   it.each(["a"])("maps %s to none", (key) => {
     expect(map({ key }, state("none"))).toEqual({ type: "none" });
+  });
+
+  describe("mode toggle", () => {
+    it.each(["m", "M", "ContextMenu", "ColorF2Yellow"])("toggles with %s", (key) => {
+      for (const overlay of ["none", "info"] as const) {
+        expect(map({ key }, state(overlay))).toEqual({ type: "toggleMode" });
+      }
+    });
+
+    it.each(["guide", "exitConfirm"] as const)("is ignored with overlay %s", (overlay) => {
+      expect(map({ key: "m" }, state(overlay))).toEqual({ type: "none" });
+    });
   });
 });

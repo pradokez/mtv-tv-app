@@ -18,11 +18,11 @@
     }
   ],
   "videos": {
-    "djV11Xbc914": { "artist": "a-ha", "song": "Take On Me", "title": "a-ha - Take On Me (Official Video) [4K]" },
-    "W8r-tXRLazs": { "artist": "The Buggles", "song": "Video Killed The Radio Star", "title": "The Buggles - Video Killed The Radio Star (Official Music Video)" },
-    "dQw4w9WgXcQ": { "artist": "Rick Astley", "song": "Never Gonna Give You Up", "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)" },
-    "hTWKbfoikeg": { "artist": "Nirvana", "song": "Smells Like Teen Spirit", "title": "Nirvana - Smells Like Teen Spirit (Official Music Video)" },
-    "HEXWRTEbj1I": { "artist": "Haddaway", "song": "What Is Love", "title": "Haddaway - What Is Love [Official]" },
-    "gJLIiF15wjQ": { "artist": "Spice Girls", "song": "Wannabe", "title": "Spice Girls - Wannabe (Official Music Video)" }
+    "djV11Xbc914": { "durationSec": 225, "artist": "a-ha", "song": "Take On Me", "title": "a-ha - Take On Me (Official Video) [4K]" },
+    "W8r-tXRLazs": { "durationSec": 254, "artist": "The Buggles", "song": "Video Killed The Radio Star", "title": "The Buggles - Video Killed The Radio Star (Official Music Video)" },
+    "dQw4w9WgXcQ": { "durationSec": 213, "artist": "Rick Astley", "song": "Never Gonna Give You Up", "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)" },
+    "hTWKbfoikeg": { "durationSec": 301, "artist": "Nirvana", "song": "Smells Like Teen Spirit", "title": "Nirvana - Smells Like Teen Spirit (Official Music Video)" },
+    "HEXWRTEbj1I": { "durationSec": 268, "artist": "Haddaway", "song": "What Is Love", "title": "Haddaway - What Is Love [Official]" },
+    "gJLIiF15wjQ": { "durationSec": 173, "artist": "Spice Girls", "song": "Wannabe", "title": "Spice Girls - Wannabe (Official Music Video)" }
   }
 }

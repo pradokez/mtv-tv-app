@@ -28,6 +28,7 @@ async function main(): Promise<void> {
     player,
     clock: systemClock,
     random: mathRandom,
+    mode: preferences.mode(),
   });
 
   const overlays = createOverlays({
@@ -70,6 +71,16 @@ async function main(): Promise<void> {
       case "skip":
         tuner.skip();
         break;
+      case "skipBlocked":
+        overlays.showNotice("Ao vivo: não dá para pular");
+        break;
+      case "toggleMode": {
+        const next = tuner.mode() === "live" ? "queue" : "live";
+        preferences.setMode(next);
+        tuner.setMode(next);
+        overlays.showNotice(next === "live" ? "Ao vivo" : "Fila");
+        break;
+      }
       // The guide is wired by a later slice (#9).
       default:
         break;
@@ -77,7 +88,7 @@ async function main(): Promise<void> {
   };
 
   window.addEventListener("keydown", (event) => {
-    const ui: UiState = { overlay: overlays.state().overlay, mode: "queue" };
+    const ui: UiState = { overlay: overlays.state().overlay, mode: tuner.mode() };
     const command = map(event, ui);
     if (command.type === "none") return;
     event.preventDefault();

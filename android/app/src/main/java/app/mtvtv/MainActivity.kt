@@ -141,6 +141,9 @@ class MainActivity : Activity() {
             KeyEvent.KEYCODE_CHANNEL_DOWN to KeySpec("ChannelDown", "ChannelDown", 428),
             KeyEvent.KEYCODE_PAGE_UP to KeySpec("ChannelUp", "ChannelUp", 427),
             KeyEvent.KEYCODE_PAGE_DOWN to KeySpec("ChannelDown", "ChannelDown", 428),
+            // Alternam o modo ao vivo/fila.
+            KeyEvent.KEYCODE_MENU to KeySpec("ContextMenu", "ContextMenu", 93),
+            KeyEvent.KEYCODE_PROG_YELLOW to KeySpec("ColorF2Yellow", "ColorF2Yellow", 405),
         )
     }
 }
