@@ -1,8 +1,19 @@
+import type { Clock, TimerId } from "../lib/clock";
 import type { GuideRow } from "./guide";
+import type { GuideOnAir } from "./on-air";
 import type { OverlayState } from "./overlays";
 
+export interface OverlaysViewDeps {
+  clock: Clock;
+  /** What is on air in a channel right now; `undefined` when the guide shows no "now on air" (queue mode). */
+  onAir?: (channelId: string, nowMs: number) => GuideOnAir | undefined;
+}
+
+/** Rows around the focus that get their "now on air" filled in: the visible ones, with some margin. */
+const ON_AIR_WINDOW = 8;
+
 /** Renders the overlay state into the lower third, the guide and the exit confirmation. */
-export function mountOverlaysView(root: HTMLElement): (state: OverlayState) => void {
+export function mountOverlaysView(root: HTMLElement, deps?: OverlaysViewDeps): (state: OverlayState) => void {
   const lowerThird = document.createElement("div");
   lowerThird.className = "lower-third";
   lowerThird.hidden = true;
@@ -36,7 +47,7 @@ export function mountOverlaysView(root: HTMLElement): (state: OverlayState) => v
   notice.setAttribute("role", "status");
   notice.hidden = true;
 
-  const guide = createGuideView();
+  const guide = createGuideView(deps);
   root.append(lowerThird, guide.el, dialog, notice);
 
   return (state) => {
@@ -73,9 +84,11 @@ function option(label: string): HTMLElement {
 /**
  * The guide is a panel on the left. Rows are rebuilt only when the row list
  * changes (a favorite toggled); moving the focus just flips a class, so
- * scrolling through 113 channels stays cheap on the TV.
+ * scrolling through 113 channels stays cheap on the TV. The "now on air" text
+ * is only computed for the rows around the focus, and again when the first of
+ * those clips ends.
  */
-function createGuideView(): { el: HTMLElement; render(state: OverlayState): void } {
+function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(state: OverlayState): void } {
   const el = document.createElement("nav");
   el.className = "guide";
   el.setAttribute("aria-label", "Guia de canais");
@@ -86,6 +99,31 @@ function createGuideView(): { el: HTMLElement; render(state: OverlayState): void
   let shownRows: readonly GuideRow[] | undefined;
   let items: HTMLElement[] = [];
   let focused: HTMLElement | undefined;
+  let refreshTimer: TimerId | undefined;
+  let focusIndex = 0;
+
+  const stopRefresh = () => {
+    if (refreshTimer !== undefined) deps?.clock.clearTimeout(refreshTimer);
+    refreshTimer = undefined;
+  };
+
+  const refreshOnAir = () => {
+    stopRefresh();
+    if (!deps?.onAir || !shownRows) return;
+    const now = deps.clock.now();
+    let nextEnd = Infinity;
+    const from = Math.max(0, focusIndex - ON_AIR_WINDOW);
+    const to = Math.min(shownRows.length, focusIndex + ON_AIR_WINDOW + 1);
+    for (let i = from; i < to; i++) {
+      const row = shownRows[i]!;
+      const target = items[i]?.querySelector<HTMLElement>(".guide-onair");
+      if (row.kind !== "channel" || !target) continue;
+      const info = deps.onAir(row.id, now);
+      target.replaceChildren(...onAirLines(info));
+      if (info) nextEnd = Math.min(nextEnd, info.endsAtMs);
+    }
+    if (nextEnd < Infinity) refreshTimer = deps.clock.setTimeout(refreshOnAir, Math.max(nextEnd - now, 0) + 50);
+  };
 
   return {
     el,
@@ -93,21 +131,27 @@ function createGuideView(): { el: HTMLElement; render(state: OverlayState): void
       el.hidden = state.overlay !== "guide";
       if (state.overlay !== "guide") {
         shownRows = undefined;
+        stopRefresh();
         return;
       }
       const { rows, focus } = state.guide;
+      let stale = false;
       if (rows !== shownRows) {
         shownRows = rows;
         items = rows.map(guideItem);
         list.replaceChildren(...items);
         focused = undefined;
+        stale = true;
       }
       if (focused !== items[focus]) {
         focused?.classList.remove("focused");
         focused = items[focus];
         focused?.classList.add("focused");
         focused?.scrollIntoView({ block: "nearest" });
+        focusIndex = focus;
+        stale = true;
       }
+      if (stale) refreshOnAir();
     },
   };
 }
@@ -136,12 +180,30 @@ function guideItem(row: GuideRow): HTMLElement {
   } else {
     icon.textContent = row.icon;
   }
+  const text = document.createElement("span");
+  text.className = "guide-text";
   const name = document.createElement("span");
   name.className = "guide-name";
   name.textContent = row.name;
+  const onAir = document.createElement("span");
+  onAir.className = "guide-onair";
+  text.append(name, onAir);
   const star = document.createElement("span");
   star.className = "guide-star";
   star.textContent = row.favorite ? "★" : "";
-  li.append(icon, name, star);
+  li.append(icon, text, star);
   return li;
+}
+
+function onAirLines(info: GuideOnAir | undefined): HTMLElement[] {
+  const line = (className: string, text: string) => {
+    const el = document.createElement("span");
+    el.className = className;
+    el.textContent = text;
+    return el;
+  };
+  const lines: HTMLElement[] = [];
+  if (info?.now) lines.push(line("guide-now", info.now));
+  if (info?.next) lines.push(line("guide-next", `A seguir: ${info.next}`));
+  return lines;
 }
