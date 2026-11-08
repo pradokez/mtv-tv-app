@@ -189,7 +189,7 @@ async function loadCatalog(): Promise<Catalog> {
 /** `?player=fake` swaps YouTube for a debug panel, to develop without network. */
 function createPlayer(stage: HTMLElement): PlayerAdapter {
   if (new URLSearchParams(window.location.search).get("player") !== "fake") {
-    return createYouTubePlayer(stage);
+    return createYouTubePlayer(stage, { autoplayAllowed: window.MtvTv !== undefined });
   }
   const fake = new FakePlayer();
   mountFakePlayerView(stage, fake);
