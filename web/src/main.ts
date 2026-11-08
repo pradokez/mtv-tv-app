@@ -46,7 +46,8 @@ async function main(): Promise<void> {
   tuner.onNowPlaying(showLowerThird);
   tuner.onNowPlaying(({ channelId }) => preferences.setLastChannel(channelId));
   const syncZapFilter = () => {
-    const favorites = new Set(preferences.favorites());
+    // Ids of channels that left the catalog must not count, or zapping would find nowhere to go.
+    const favorites = new Set(preferences.favorites().filter((id) => catalog.channel(id)));
     tuner.setZapFilter(preferences.favoritesOnly() ? favorites : undefined);
   };
   syncZapFilter();
