@@ -463,6 +463,7 @@ describe("live mode", () => {
   });
   const grid = createLiveSchedule(liveCatalog);
   const START = 1_700_000_000_000;
+  const CYCLE_MS = 60_000;
 
   function liveSetup(mode?: "live" | "queue") {
     const player = new FakePlayer();
@@ -638,4 +639,3 @@ describe("live mode", () => {
     expect(player.current).toEqual({ videoId: onAir.videoId, startSec: onAir.offsetSec });
   });
 });
-const CYCLE_MS = 60_000;
