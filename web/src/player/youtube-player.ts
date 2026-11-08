@@ -42,13 +42,24 @@ declare global {
   }
 }
 
+export interface YouTubePlayerOptions {
+  clock?: Clock;
+  /** The host guarantees autoplay with sound (Android shell), so the fallback to muted never applies. */
+  autoplayAllowed?: boolean;
+}
+
 /**
  * Player Adapter backed by the YouTube IFrame API: no visible controls,
  * autoplay, 720p preferred. If the browser blocks autoplay with sound (desktop
  * browsers without a prior user gesture), playback falls back to muted and a
- * hint asks for any key or click to turn the sound on.
+ * hint asks for any key or click to turn the sound on. A browser that played
+ * with sound once will not block it again, and a clip that is merely slow to
+ * load looks just like a blocked one, so the check only runs until then.
  */
-export function createYouTubePlayer(container: HTMLElement, clock: Clock = systemClock): PlayerAdapter {
+export function createYouTubePlayer(
+  container: HTMLElement,
+  { clock = systemClock, autoplayAllowed = false }: YouTubePlayerOptions = {},
+): PlayerAdapter {
   const ended = createEmitter<[videoId: string]>();
   const errored = createEmitter<[videoId: string, code: number]>();
   const hint = createSoundHint(container);
@@ -65,13 +76,14 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
   let pending: { videoId: string; startSec: number } | undefined;
   let autoplayCheck: TimerId | undefined;
   let muted = false;
+  let autoplayKnownOk = autoplayAllowed;
 
   const start = (videoId: string, startSec: number) => {
     if (!player) return;
     player.loadVideoById({ videoId, startSeconds: startSec });
     player.setPlaybackQuality?.("hd720");
     if (autoplayCheck !== undefined) clock.clearTimeout(autoplayCheck);
-    if (!muted) autoplayCheck = clock.setTimeout(checkAutoplay, AUTOPLAY_CHECK_MS);
+    if (!muted && !autoplayKnownOk) autoplayCheck = clock.setTimeout(checkAutoplay, AUTOPLAY_CHECK_MS);
   };
 
   // Still unstarted/cued after the wait means the browser refused to start it.
@@ -87,6 +99,7 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
     hint.show();
     const unmute = () => {
       muted = false;
+      autoplayKnownOk = true;
       player?.unMute();
       hint.hide();
     };
@@ -126,6 +139,7 @@ export function createYouTubePlayer(container: HTMLElement, clock: Clock = syste
           pending = undefined;
         },
         onStateChange: ({ data }) => {
+          if (data === State.PLAYING && !muted) autoplayKnownOk = true;
           if (data === State.ENDED && currentVideoId) ended.emit(currentVideoId);
         },
         onError: ({ data }) => {
