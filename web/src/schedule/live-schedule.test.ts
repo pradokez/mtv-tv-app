@@ -204,6 +204,14 @@ describe("live schedule with commercial breaks", () => {
     }
   });
 
+  it("repeats the only commercial when a break has more slots than commercials", () => {
+    const schedule = createLiveSchedule(build(["m0"]), { breaks: RULE });
+
+    const commercials = cycleItems(schedule, 2).filter((i) => i.kind === "commercial");
+
+    expect(commercials.map((i) => i.videoId)).toEqual(Array(6).fill("m0"));
+  });
+
   it("lists the commercials of the break in what comes next", () => {
     const schedule = createLiveSchedule(build(), { breaks: RULE });
     const onAir = schedule.whatsOn("big", START + 3 * 60_000, 3)!; // 4th clip is on air
