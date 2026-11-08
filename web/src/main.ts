@@ -53,7 +53,10 @@ async function main(): Promise<void> {
   const showLowerThird = (nowPlaying: NowPlaying | undefined) => {
     if (status.isShown()) return;
     const channel = nowPlaying && catalog.channel(nowPlaying.channelId);
-    if (nowPlaying && channel) overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name));
+    if (nowPlaying && channel) {
+      const number = catalog.channels().indexOf(channel) + 1;
+      overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name, number));
+    }
   };
   tuner.onNowPlaying(showLowerThird);
   tuner.onNowPlaying(({ channelId }) => preferences.setLastChannel(channelId));
