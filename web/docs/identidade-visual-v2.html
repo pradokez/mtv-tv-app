@@ -24,17 +24,17 @@
   .oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:#ffd400;color:#0b0710;border-radius:5px}
   .fit{width:768px;height:432px;overflow:hidden;border-radius:6px;outline:1px solid rgba(255,255,255,.12)}
   .tv{position:relative;width:960px;height:540px;overflow:hidden;transform:scale(.8);transform-origin:0 0;color:#fff;line-height:1.15;font-family:"Chakra Petch","Helvetica Neue",Arial,sans-serif}
-  .pa{--bg:#060a12;--raised:#0e1a2a;--accent:#19e3ff;--hl:#b8ff2e;--ink:#04121a;--dim:rgba(255,255,255,.74);--label:#19e3ff}
+  .pa{--bg:#0a090c;--raised:#1d1a22;--accent:#cb1c6a;--on:#fff;--hl:#f1f028;--ink:#0a090c;--dim:#c0aac0;--label:#2af0f1;--rule:#2af0f1}
   .pb{--bg:#0b0813;--raised:#171028;--accent:#7b5cff;--hl:#ff8a1f;--ink:#120a00;--dim:rgba(255,255,255,.74);--label:#b8a6ff}
   .vd{position:absolute;inset:0;background:repeating-linear-gradient(135deg,#222a35 0 24px,#1a212b 24px 48px)}
   .lt{position:absolute;left:0;right:0;bottom:0;padding:64px 5% 5%;background:linear-gradient(to top,color-mix(in srgb,var(--bg) 94%,transparent),color-mix(in srgb,var(--bg) 55%,transparent) 55%,transparent)}
   .lt p{margin:0;max-width:60%}
   .lt-main{font-size:44px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
   .lt-sub{margin-top:3px!important;font-size:30px;font-weight:500;color:var(--dim)}
-  .lt-ch{display:block;width:fit-content;margin-top:14px!important;padding:3px 18px 3px 14px!important;background:var(--accent);color:var(--ink);font-size:22px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+  .lt-ch{display:block;width:fit-content;margin-top:14px!important;padding:3px 18px 3px 14px!important;background:var(--accent);color:var(--on,var(--ink));font-size:22px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
   .pb .lt-ch{color:#fff}
   .st{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:28px;padding:5%;font-size:30px;font-weight:500;text-align:center;color:var(--dim);background:radial-gradient(ellipse at 50% 40%,var(--raised),var(--bg) 70%)}
-  .st::before{content:"MTV TV";justify-self:center;padding:3px 20px;background:var(--accent);color:var(--ink);font-size:44px;font-weight:700;letter-spacing:.16em;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+  .st::before{content:"MTV TV";justify-self:center;padding:3px 20px;background:var(--accent);color:var(--on,var(--ink));font-size:44px;font-weight:700;letter-spacing:.16em;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
   .pb .st::before{color:#fff}
   .gd{position:absolute;left:0;top:0;bottom:0;width:44%;padding:5% 0 5% 5%;box-sizing:border-box;background:linear-gradient(to right,color-mix(in srgb,var(--bg) 96%,transparent),color-mix(in srgb,var(--bg) 90%,transparent) 75%,transparent);display:flex;flex-direction:column;gap:6px}
   .gh{margin:10px 0 2px;font:600 15px ui-monospace,Menlo,monospace;letter-spacing:.2em;color:var(--label)}
@@ -48,7 +48,7 @@
   .rw.f .star{color:var(--ink)}
   /* saída */
   .xv{position:absolute;inset:0;display:grid;place-items:center;background-color:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(6px);background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:40px 40px}
-  .xc{width:600px;padding:2px;background:var(--accent);clip-path:polygon(0 0,calc(100% - 28px) 0,100% 28px,100% 100%,28px 100%,0 calc(100% - 28px))}
+  .xc{width:600px;padding:2px;background:var(--rule,var(--accent));clip-path:polygon(0 0,calc(100% - 28px) 0,100% 28px,100% 100%,28px 100%,0 calc(100% - 28px))}
   .xi{display:flex;flex-direction:column;gap:22px;padding:30px 40px 26px;background:var(--bg);clip-path:polygon(0 0,calc(100% - 27px) 0,100% 27px,100% 100%,27px 100%,0 calc(100% - 27px))}
   .xk{font:600 14px ui-monospace,Menlo,monospace;letter-spacing:.22em;color:var(--label)}
   .xq{margin:0;font-size:46px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
@@ -60,7 +60,7 @@
   .xb.on span{background:var(--hl);color:var(--ink);font-weight:700}
   .xh{display:flex;gap:20px;font:500 13px ui-monospace,Menlo,monospace;color:rgba(255,255,255,.55)}
   .xh b{display:inline-block;margin-right:6px;padding:1px 6px;border:1px solid rgba(255,255,255,.4);color:#fff;font-weight:600}
-  .xbd{position:absolute;left:0;right:0;top:50%;height:200px;margin-top:-100px;display:flex;align-items:center;justify-content:space-between;gap:40px;padding:0 5%;background:color-mix(in srgb,var(--bg) 94%,transparent);border-top:3px solid var(--accent);border-bottom:3px solid var(--accent)}
+  .xbd{position:absolute;left:0;right:0;top:50%;height:200px;margin-top:-100px;display:flex;align-items:center;justify-content:space-between;gap:40px;padding:0 5%;background:color-mix(in srgb,var(--bg) 94%,transparent);border-top:3px solid var(--rule,var(--accent));border-bottom:3px solid var(--rule,var(--accent))}
   .xbd .xq{font-size:54px}
   .xbd .xr{width:440px}
   .note{font:12px/1.5 system-ui,sans-serif;color:rgba(255,255,255,.55);max-width:768px;margin:20px 0 0}
@@ -74,8 +74,8 @@
 </div>
 
 <section class="turn" id="A">
-  <div class="thd"><span class="oid">A</span>Ciano elétrico + verde-limão
-    <div class="sw"><div class="chip"><i style="background:#060a12"></i>bg #060a12</div><div class="chip"><i style="background:#0e1a2a"></i>raised #0e1a2a</div><div class="chip"><i style="background:#19e3ff"></i>accent #19e3ff</div><div class="chip"><i style="background:#b8ff2e"></i>highlight #b8ff2e</div></div></div>
+  <div class="thd"><span class="oid">A</span>Paleta MTV (escolhida): carmim, amarelo, ciano e lilás
+    <div class="sw"><div class="chip"><i style="background:#0a090c"></i>bg #0a090c</div><div class="chip"><i style="background:#1d1a22"></i>raised #1d1a22</div><div class="chip"><i style="background:#cb1c6a"></i>accent #cb1c6a</div><div class="chip"><i style="background:#f1f028"></i>highlight #f1f028</div><div class="chip"><i style="background:#2af0f1"></i>cyan #2af0f1</div><div class="chip"><i style="background:#c0aac0"></i>dim #c0aac0</div></div></div>
   <div class="opts">
     <div class="opt" id="A1"><div class="olabel"><span class="oid">A1</span>Tarja</div>
       <div class="fit"><div class="tv pa"><div class="vd"></div><div class="lt"><p class="lt-main">Artista de Exemplo</p><p class="lt-sub">Música de Exemplo</p><p class="lt-ch">Anos 80</p></div></div></div></div>
@@ -108,7 +108,7 @@
 </section>
 
 <section class="turn" id="B">
-  <div class="thd"><span class="oid">B</span>Violeta UV + laranja
+  <div class="thd"><span class="oid">B</span>Violeta UV + laranja (descartada)
     <div class="sw"><div class="chip"><i style="background:#0b0813"></i>bg #0b0813</div><div class="chip"><i style="background:#171028"></i>raised #171028</div><div class="chip"><i style="background:#7b5cff"></i>accent #7b5cff</div><div class="chip"><i style="background:#ff8a1f"></i>highlight #ff8a1f</div></div></div>
   <div class="opts">
     <div class="opt" id="B1"><div class="olabel"><span class="oid">B1</span>Tarja</div>
@@ -138,19 +138,19 @@
 </section>
 
 <section class="turn" id="C">
-  <div class="thd"><span class="oid">C</span>Ícone do app na home da TV (paleta A)</div>
+  <div class="thd"><span class="oid">C</span>Ícone do app na home da TV (paleta MTV)</div>
   <style>
     .home{display:flex;gap:28px;align-items:center;padding:56px 48px;background:linear-gradient(#0a0f1a,#05080f);width:max-content;border-radius:6px;outline:1px solid rgba(255,255,255,.12)}
-    .bn{position:relative;flex:none;width:480px;height:270px;display:grid;place-items:center;overflow:hidden;background-color:#060a12;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:30px 30px;font-family:"Chakra Petch",Arial,sans-serif}
-    .bn .plq{display:block;padding:14px 38px;background:#19e3ff;color:#04121a;font-size:66px;font-weight:700;letter-spacing:.16em;line-height:1;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
-    .bn .bar{position:absolute;left:50%;bottom:62px;width:150px;height:8px;margin-left:-75px;background:#b8ff2e;transform:translateX(98px);}
-    .bn.focus{outline:6px solid #b8ff2e;outline-offset:0;transform:scale(1.08);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+    .bn{position:relative;flex:none;width:480px;height:270px;display:grid;place-items:center;overflow:hidden;background-color:#0a090c;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:30px 30px;font-family:"Chakra Petch",Arial,sans-serif}
+    .bn .plq{display:block;padding:14px 38px;background:#cb1c6a;color:#fff;font-size:66px;font-weight:700;letter-spacing:.16em;line-height:1;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+    .bn .bar{position:absolute;left:50%;bottom:62px;width:150px;height:8px;margin-left:-75px;background:#f1f028;transform:translateX(98px);}
+    .bn.focus{outline:6px solid #f1f028;outline-offset:0;transform:scale(1.08);box-shadow:0 18px 40px rgba(0,0,0,.6)}
     .bn.other{background:repeating-linear-gradient(135deg,#1c222d 0 18px,#161b24 18px 36px);opacity:.7}
     .bn.other span{font:11px ui-monospace,Menlo,monospace;color:rgba(255,255,255,.4)}
     .masks{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
-    .ic108{position:relative;width:216px;height:216px;background:#060a12;overflow:hidden;display:grid;place-items:center}
-    .ic108 .plq2{display:grid;place-items:center;width:92px;height:92px;background:#19e3ff;color:#04121a;font:700 46px/1 "Chakra Petch",Arial,sans-serif;letter-spacing:.04em;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
-    .ic108 .bar2{position:absolute;left:62px;top:150px;width:48px;height:6px;background:#b8ff2e;transform:translateX(44px)}
+    .ic108{position:relative;width:216px;height:216px;background:#0a090c;overflow:hidden;display:grid;place-items:center}
+    .ic108 .plq2{display:grid;place-items:center;width:92px;height:92px;background:#cb1c6a;color:#fff;font:700 46px/1 "Chakra Petch",Arial,sans-serif;letter-spacing:.04em;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+    .ic108 .bar2{position:absolute;left:62px;top:150px;width:48px;height:6px;background:#f1f028;transform:translateX(44px)}
     .m-circle{border-radius:50%}.m-squircle{border-radius:28%}.m-square{border-radius:6px}
     .guide-safe{outline:2px dashed rgba(255,255,255,.35);outline-offset:-20px;border-radius:50%}
   </style>
@@ -169,8 +169,8 @@
       </div></div>
   </div>
   <p class="note">Plano de implementação (ainda não aplicado ao Android):<br>
-    1. <b>Banner</b> (<code>drawable/banner.xml</code>): fundo <code>#060a12</code> com grade fina, placa ciano chanfrada com “MTV TV” em <code>#04121a</code> e barra lima. O Android não usa fontes em vetor, então o texto vira contorno (path) a partir do Chakra Petch Bold. Não copia o logotipo da MTV.<br>
-    2. <b>Ícone</b> (<code>ic_launcher_foreground.xml</code> / <code>_background.xml</code>): placa chanfrada com “TV” e barra lima, dentro da zona segura de 66 dp; fundo <code>#060a12</code>. Considerar também <code>monochrome</code> para ícone temático.<br>
+    1. <b>Banner</b> (<code>drawable/banner.xml</code>): fundo <code>#0a090c</code> com grade fina, placa ciano chanfrada com “MTV TV” em <code>#fff</code> e barra lima. O Android não usa fontes em vetor, então o texto vira contorno (path) a partir do Chakra Petch Bold. Não copia o logotipo da MTV.<br>
+    2. <b>Ícone</b> (<code>ic_launcher_foreground.xml</code> / <code>_background.xml</code>): placa chanfrada com “TV” e barra lima, dentro da zona segura de 66 dp; fundo <code>#0a090c</code>. Considerar também <code>monochrome</code> para ícone temático.<br>
     3. <b>Validação:</b> instalar o APK na TCL e conferir o banner na home, com e sem foco, a 3 m. Texto legível e nada colado nas bordas (o launcher corta cantos em alguns modelos).<br>
     4. <b>Decisão pendente:</b> o banner mostra só “MTV TV”, sem subtítulo nem arte de clipe. Se quiser algo mais vivo (ex.: faixa lima diagonal), diga antes de eu converter para vetor.</p>
 </section>

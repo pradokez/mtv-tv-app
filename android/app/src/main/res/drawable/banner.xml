@@ -2,14 +2,14 @@
     android:width="320dp" android:height="180dp"
     android:viewportWidth="320" android:viewportHeight="180">
     <!-- Night-blue base with a faint grid. -->
-    <path android:fillColor="#060A12" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#0A090C" android:pathData="M0,0h320v180h-320z" />
     <path android:fillColor="#0DFFFFFF" android:pathData="M20,0h0.5v180h-0.5zM40,0h0.5v180h-0.5zM60,0h0.5v180h-0.5zM80,0h0.5v180h-0.5zM100,0h0.5v180h-0.5zM120,0h0.5v180h-0.5zM140,0h0.5v180h-0.5zM160,0h0.5v180h-0.5zM180,0h0.5v180h-0.5zM200,0h0.5v180h-0.5zM220,0h0.5v180h-0.5zM240,0h0.5v180h-0.5zM260,0h0.5v180h-0.5zM280,0h0.5v180h-0.5zM300,0h0.5v180h-0.5zM0,20h320v0.5h-320zM0,40h320v0.5h-320zM0,60h320v0.5h-320zM0,80h320v0.5h-320zM0,100h320v0.5h-320zM0,120h320v0.5h-320zM0,140h320v0.5h-320zM0,160h320v0.5h-320z" />
     <!-- Cyan chamfered plate. -->
-    <path android:fillColor="#19E3FF" android:pathData="M48,62H257L272,77V118H63L48,103Z" />
+    <path android:fillColor="#CB1C6A" android:pathData="M48,62H257L272,77V118H63L48,103Z" />
     <!-- "MTV TV" in Chakra Petch Bold, converted to outlines. -->
     <group android:translateX="73.18" android:translateY="104">
-        <path android:fillColor="#04121A" android:pathData="M2.6 -28H7.64L15.96 -9.92H16.04L24.4 -28H29.44V0H24.2V-17.04H24.12L17.68 -3.92H14.32L7.92 -17.04H7.84V0H2.6ZM47.4 -23.4H39.04V-28H61.2V-23.4H52.84V0H47.4ZM68.6 -28H74.2L81.16 -6.48H81.24L88.2 -28H93.8L83.84 0H78.56ZM126.84 -23.4H118.48V-28H140.64V-23.4H132.28V0H126.84ZM148.04 -28H153.64L160.6 -6.48H160.68L167.64 -28H173.24L163.28 0H158Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M2.6 -28H7.64L15.96 -9.92H16.04L24.4 -28H29.44V0H24.2V-17.04H24.12L17.68 -3.92H14.32L7.92 -17.04H7.84V0H2.6ZM47.4 -23.4H39.04V-28H61.2V-23.4H52.84V0H47.4ZM68.6 -28H74.2L81.16 -6.48H81.24L88.2 -28H93.8L83.84 0H78.56ZM126.84 -23.4H118.48V-28H140.64V-23.4H132.28V0H126.84ZM148.04 -28H153.64L160.6 -6.48H160.68L167.64 -28H173.24L163.28 0H158Z" />
     </group>
     <!-- Lime bar. -->
-    <path android:fillColor="#B8FF2E" android:pathData="M172,128h100v6h-100z" />
+    <path android:fillColor="#F1F028" android:pathData="M172,128h100v6h-100z" />
 </vector>

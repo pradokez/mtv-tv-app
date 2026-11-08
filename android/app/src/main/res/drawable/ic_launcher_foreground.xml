@@ -2,9 +2,9 @@
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <!-- Everything stays inside the 66dp safe circle. -->
-    <path android:fillColor="#19E3FF" android:pathData="M34,30H66L74,38V70H42L34,62Z" />
+    <path android:fillColor="#CB1C6A" android:pathData="M34,30H66L74,38V70H42L34,62Z" />
     <group android:translateX="39.99" android:translateY="57.7">
-        <path android:fillColor="#04121A" android:pathData="M4.93 -12.87H0.33V-15.4H12.52V-12.87H7.92V0H4.93ZM13.95 -15.4H17.03L20.86 -3.56H20.9L24.73 -15.4H27.81L22.33 0H19.43Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M4.93 -12.87H0.33V-15.4H12.52V-12.87H7.92V0H4.93ZM13.95 -15.4H17.03L20.86 -3.56H20.9L24.73 -15.4H27.81L22.33 0H19.43Z" />
     </group>
-    <path android:fillColor="#B8FF2E" android:pathData="M44,75h30v4h-30z" />
+    <path android:fillColor="#F1F028" android:pathData="M44,75h30v4h-30z" />
 </vector>
