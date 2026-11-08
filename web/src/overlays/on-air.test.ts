@@ -4,6 +4,7 @@ import type { Clock } from "../lib/clock";
 import { FakePlayer } from "../player/fake-player";
 import { createLiveSchedule } from "../schedule/live-schedule";
 import { createTuner } from "../tuner/tuner";
+import { COMMERCIAL_LABEL } from "./lower-third";
 import { clipLabel, guideOnAir } from "./on-air";
 
 const catalog = parseCatalog({
@@ -86,5 +87,35 @@ describe("guideOnAir", () => {
     tuner.tune("duo");
 
     expect(player.current).toEqual({ videoId: info.videoId, startSec: schedule.whatsOn("duo", now)!.offsetSec });
+  });
+});
+
+describe("guideOnAir during a commercial break", () => {
+  const withBreaks = parseCatalog({
+    schemaVersion: 1,
+    channels: [{ id: "tv", name: "TV", icon: "", order: 0, videoIds: ["a", "b"] }],
+    videos: { a: { durationSec: 60, title: "Clip A" }, b: { durationSec: 60, title: "Clip B" } },
+    commercials: ["m1", "m2", "m3"].map((id) => ({ id, brand: "Marca", title: id, year: 1990, durationSec: 20 })),
+  });
+  const grid = createLiveSchedule(withBreaks, { breaks: { every: 2, size: 2 } });
+  const firstBreak = () => {
+    let t = 0;
+    while (grid.whatsOn("tv", t)!.kind !== "commercial") t += 1000;
+    return t;
+  };
+
+  it("says it is a break and names the next clip, not the next commercial", () => {
+    const info = guideOnAir(withBreaks, grid, "tv", firstBreak())!;
+
+    expect(info.now).toBe(COMMERCIAL_LABEL);
+    expect(info.next).toMatch(/^Clip [AB]$/);
+  });
+
+  it("names the clip, with the next commercial skipped, before a break", () => {
+    const before = firstBreak() - 1000;
+    const info = guideOnAir(withBreaks, grid, "tv", before)!;
+
+    expect(info.now).toMatch(/^Clip [AB]$/);
+    expect(info.next).toMatch(/^Clip [AB]$/);
   });
 });
