@@ -3,7 +3,9 @@ import type { ChannelSnapshot } from "../catalog/schema";
 import type { Clock, TimerId } from "../lib/clock";
 import type { Random } from "../lib/random";
 import { createEmitter, type PlayerAdapter, type Unsubscribe } from "../player/player";
+import type { PlaybackMode } from "../preferences/preferences";
 import { createQueue, type Queue } from "../queue/queue";
+import { createLiveSchedule, type LiveSchedule, type LiveSlot } from "../schedule/live-schedule";
 
 /** How long zapping must stay quiet before the video of the landing channel loads. */
 export const ZAP_DEBOUNCE_MS = 400;
@@ -14,6 +16,10 @@ export interface TunerDeps {
   clock: Clock;
   /** Seeds the shuffled queue of each channel (once per session). */
   random: Random;
+  /** The live grid. Defaults to one built from the catalog. */
+  schedule?: LiveSchedule;
+  /** Starting mode. Defaults to live. */
+  mode?: PlaybackMode;
 }
 
 export interface NowPlaying {
@@ -25,10 +31,13 @@ export interface NowPlaying {
 export type TunerStatus = "playing" | "unavailable";
 
 /**
- * Decides what plays: which video of which channel. Each channel plays a
+ * Decides what plays: which video of which channel, and from which second.
+ * In live mode a channel follows the clock-driven grid (see `LiveSchedule`);
+ * in queue mode, or for a channel whose videos have no duration, it plays a
  * shuffled queue that is remembered for the session, so coming back to a
  * channel continues where its queue left off. Videos that failed are never
- * tried again in the session, on any channel.
+ * tried again in the session, on any channel; in live mode the grid itself is
+ * left alone and the next item of the grid plays instead.
  */
 export interface Tuner {
   /** Switches to a channel right away. Throws for unknown ids. */
@@ -37,8 +46,12 @@ export interface Tuner {
   channelUp(): void;
   /** Previous channel in the list (wraps around). Loads once the zapping settles. */
   channelDown(): void;
-  /** Skips the current clip. Loads once the zapping/skipping settles. */
+  /** Skips the current clip (queue mode; ignored in live mode). Loads once the zapping/skipping settles. */
   skip(): void;
+  /** Switches between live and queue mode; the current channel is retuned right away. */
+  setMode(mode: PlaybackMode): void;
+  /** Mode in effect for the current channel: queue when the channel has no grid. */
+  mode(): PlaybackMode;
   /** The current video ended: play the next one. */
   onEnded(): void;
   /** `videoId` failed to play: if it is the current one, never try it again and move on. */
@@ -66,7 +79,17 @@ interface Pending {
   videoId?: string;
 }
 
-export function createTuner({ catalog, player, clock, random }: TunerDeps): Tuner {
+export function createTuner({
+  catalog,
+  player,
+  clock,
+  random,
+  schedule: grid = createLiveSchedule(catalog),
+  mode: initialMode = "live",
+}: TunerDeps): Tuner {
+  let chosenMode = initialMode;
+  /** Grid slot being played; set only while the channel plays live. */
+  let slot: LiveSlot | undefined;
   const queues = new Map<string, Queue>();
   let channel: ChannelSnapshot | undefined;
   let videoId: string | undefined;
@@ -119,21 +142,48 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
     return next;
   };
 
-  const load = (next: ChannelSnapshot, nextVideoId: string | undefined) => {
+  const isLive = (target: ChannelSnapshot) =>
+    chosenMode === "live" && grid.scheduledIds(target.id).length > 0;
+
+  const load = (next: ChannelSnapshot, nextVideoId: string | undefined, startSec = 0, nextSlot?: LiveSlot) => {
     channel = next;
     videoId = nextVideoId;
+    slot = nextSlot;
     if (!nextVideoId) return setStatus("unavailable");
-    player.load(nextVideoId, 0);
+    player.load(nextVideoId, startSec);
     setStatus("playing");
     started.emit({ channelId: next.id, videoId: nextVideoId });
+  };
+
+  /**
+   * Plays what is on air at `atMs` or, if that video failed, the first item of
+   * the grid after it that did not. Falls back to the queue when every video of
+   * the grid failed.
+   */
+  const playLive = (target: ChannelSnapshot, atMs: number) => {
+    const ids = grid.scheduledIds(target.id);
+    let at = atMs;
+    let onAir = grid.whatsOn(target.id, at, 0)!;
+    // Two cycles contain every video of the grid, so this finds a playable one if any is.
+    for (let i = 0; i < 2 * ids.length && bad.has(onAir.videoId); i++) {
+      at = onAir.endsAtMs;
+      onAir = grid.whatsOn(target.id, at, 0)!;
+    }
+    if (bad.has(onAir.videoId)) return load(target, nextPlayable(target));
+    load(target, onAir.videoId, onAir.offsetSec, onAir);
+  };
+
+  /** Loads what plays next on `target` right now, following the grid or the queue. */
+  const playNow = (target: ChannelSnapshot, drawn?: string) => {
+    if (isLive(target)) playLive(target, clock.now());
+    else load(target, nextPlayable(target, drawn));
   };
 
   const settle = () => {
     const target = pending;
     cancelPending();
     if (!target) return;
-    const next = lookup(target.channelId);
-    load(next, nextPlayable(next, target.videoId));
+    playNow(lookup(target.channelId), target.videoId);
   };
 
   const schedule = (next: Pending) => {
@@ -141,6 +191,8 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
     pending = next;
     timer = clock.setTimeout(settle, ZAP_DEBOUNCE_MS);
   };
+
+  const pendingTarget = () => lookup(pending?.channelId ?? channel!.id);
 
   const zap = (step: 1 | -1) => {
     if (!channel) return;
@@ -152,25 +204,37 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
   };
 
   const advance = () => {
-    if (channel && videoId) load(channel, nextPlayable(channel));
+    if (!channel || !videoId) return;
+    // Never earlier than the end of the clip that was playing: the next one starts from its beginning.
+    if (slot && isLive(channel)) playLive(channel, Math.max(clock.now(), slot.endsAtMs));
+    else load(channel, nextPlayable(channel));
   };
 
   const tuner: Tuner = {
     tune(channelId) {
       const next = lookup(channelId);
       cancelPending();
-      load(next, nextPlayable(next));
+      playNow(next);
     },
     channelUp: () => zap(1),
     channelDown: () => zap(-1),
     skip() {
-      if (!channel) return;
+      if (!channel || isLive(pendingTarget())) return;
       const target = lookup(pending?.channelId ?? channel.id);
       const queue = queueOf(target);
       // Clip that would play if the burst settled now: already drawn, or still to draw.
       if (target.id !== channel.id && pending?.videoId === undefined) queue.next();
       schedule({ channelId: target.id, videoId: queue.next() });
     },
+    setMode(next) {
+      if (next === chosenMode) return;
+      chosenMode = next;
+      if (!channel) return;
+      const current = channel;
+      cancelPending();
+      playNow(current);
+    },
+    mode: () => (channel ? (isLive(channel) ? "live" : "queue") : chosenMode),
     onEnded() {
       if (!pending) advance();
     },
@@ -186,7 +250,9 @@ export function createTuner({ catalog, player, clock, random }: TunerDeps): Tune
     setOnline(next) {
       const reconnected = next && !online;
       online = next;
-      if (reconnected && videoId) player.load(videoId, 0);
+      if (!reconnected || !videoId || !channel) return;
+      if (slot && isLive(channel)) playLive(channel, clock.now());
+      else player.load(videoId, 0);
     },
     onStatus: (listener) => statusChanged.on(listener),
   };
