@@ -1,3 +1,6 @@
+import "@fontsource/chakra-petch/latin-500.css";
+import "@fontsource/chakra-petch/latin-600.css";
+import "@fontsource/chakra-petch/latin-700.css";
 import "./style.css";
 import { parseCatalog, type Catalog } from "./catalog/catalog";
 import type { Command, UiState } from "./input/commands";

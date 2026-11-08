@@ -1,0 +1,7 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Themed icon: plate with the letters cut out (even-odd), plus the bar. -->
+    <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M34,30H66L74,38V70H42L34,62ZM44.92 44.83H40.32V42.3H52.51V44.83H47.91V57.7H44.92ZM53.94 42.3H57.02L60.85 54.14H60.89L64.72 42.3H67.8L62.32 57.7H59.42Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M44,75h30v4h-30z" />
+</vector>
