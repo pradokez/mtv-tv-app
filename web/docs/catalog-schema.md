@@ -21,7 +21,7 @@ Os tipos TypeScript em [`src/catalog/schema.ts`](../src/catalog/schema.ts) são 
   ],
   "videos": {
     "djV11Xbc914": {
-      "durationSec": 225,                 // opcional na fase 1; exigido pela grade ao vivo (fase 2)
+      "durationSec": 225,                 // em segundos; sempre presente no snapshot gerado pelo `pnpm catalog`
       "artist": "a-ha",                   // opcional
       "song": "Take On Me",               // opcional
       "title": "a-ha - Take On Me (Official Video)" // opcional: título original do YouTube
@@ -32,6 +32,11 @@ Os tipos TypeScript em [`src/catalog/schema.ts`](../src/catalog/schema.ts) são 
 
 - Os vídeos ficam num mapa por ID, separados dos canais. Um clipe que aparece em vários canais é descrito uma vez só.
 - Sem `artist` ou `song`, a tarja usa `title`.
+- `durationSec` vem da YouTube Data API (`contentDetails.duration`) e está presente em todo vídeo do snapshot gerado pelo Catalog Builder: vídeos privados, removidos, não embutíveis ou sem duração são descartados antes de gravar. No esquema ele segue opcional, porque o catálogo de exemplo e catálogos antigos podem não tê-lo; a grade ao vivo (fase 2) depende dele.
+
+## Geração
+
+`pnpm catalog` exige a chave da YouTube Data API v3 em `YOUTUBE_API_KEY` (só por variável de ambiente, nunca no repositório). As consultas vão em lotes de 50 IDs (`videos.list`, `part=contentDetails,status`, 1 unidade de cota por lote, ~2.150 unidades na primeira execução). As respostas ficam em cache em `web/.cache/youtube-meta.json`, ignorado pelo git e gravado após cada lote: uma execução interrompida retoma de onde parou e as seguintes só consultam IDs novos.
 
 ## Regras de carga
 

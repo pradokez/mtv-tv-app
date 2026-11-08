@@ -6,13 +6,19 @@
  * This is the only place in the project that talks to the site, and only when
  * run by hand. It fetches the three static files below and nothing else (no
  * counter or telemetry endpoints).
+ *
+ * Durations and embed status come from the YouTube Data API, with the key in
+ * the `YOUTUBE_API_KEY` environment variable. Answers are cached in
+ * `.cache/youtube-meta.json` (git-ignored), so a run cut short by the quota
+ * resumes where it stopped.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build, noMetaLookup, type SearchEntry } from "./build.ts";
+import { build, type SearchEntry } from "./build.ts";
 import { parseChannelConfig } from "./channel-config.ts";
 import { formatReport } from "./report.ts";
+import { createYouTubeMetaLookup } from "./youtube-meta.ts";
 
 const SITE = "https://wantmymtv.org";
 const SOURCES = {
@@ -21,6 +27,7 @@ const SOURCES = {
   searchIndex: `${SITE}/search-index.json`,
 };
 const OUTPUT = fileURLToPath(new URL("../../public/catalog.json", import.meta.url));
+const META_CACHE = fileURLToPath(new URL("../../.cache/youtube-meta.json", import.meta.url));
 
 async function download(url: string): Promise<string> {
   const response = await fetch(url);
@@ -46,6 +53,13 @@ function parseSearchIndex(text: string): SearchEntry[] {
 }
 
 async function main() {
+  const apiKey = process.env.YOUTUBE_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error(
+      "defina YOUTUBE_API_KEY com uma chave da YouTube Data API v3 (ex.: YOUTUBE_API_KEY=... pnpm catalog)",
+    );
+  }
+
   console.log("Baixando playlists, configuração de canais e índice de busca…");
   const [playlists, channelConfig, searchIndex] = await Promise.all([
     download(SOURCES.playlists).then(parsePlaylists),
@@ -53,11 +67,18 @@ async function main() {
     download(SOURCES.searchIndex).then(parseSearchIndex),
   ]);
 
+  console.log(`Consultando durações na YouTube Data API (o que já está em ${META_CACHE} não é consultado)…`);
   const { catalog, report } = await build({
     playlists,
     channelConfig,
     searchIndex,
-    metaLookup: noMetaLookup,
+    metaLookup: createYouTubeMetaLookup({
+      apiKey,
+      cachePath: META_CACHE,
+      onProgress: (done, total) => {
+        if (done === total || done % 5000 === 0) console.log(`Durações: ${done} de ${total} vídeos novos consultados`);
+      },
+    }),
     generatedAt: new Date().toISOString(),
   });
 
