@@ -5,6 +5,8 @@
  * other video, and copies what survives into the snapshot.
  */
 
+import { YOUTUBE_ID } from "./build.ts";
+
 export interface CuratedCommercial {
   /** YouTube video id. */
   id: string;
@@ -17,8 +19,6 @@ export interface CuratedCommercial {
 export class CommercialsError extends Error {
   override name = "CommercialsError";
 }
-
-const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
 /** Parses the curated file's text. The order of the file is kept. */
 export function parseCuratedCommercials(text: string): CuratedCommercial[] {

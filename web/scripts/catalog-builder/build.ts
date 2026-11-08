@@ -85,7 +85,7 @@ export interface BuildResult {
 /** A commercial longer than this is probably a compilation, not a single spot. */
 const LONG_COMMERCIAL_SEC = 90;
 
-const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+export const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
 /**
  * Our channel order (not the site's): decades first, like flipping through
