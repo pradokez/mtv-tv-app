@@ -114,6 +114,7 @@ O app guarda o último canal, os favoritos, o filtro de favoritos e o modo no ar
 | **→** | `→` | Fila: pula o clipe. Ao vivo: avisa "Ao vivo não se pula" (a grade segue o relógio) | Marca/desmarca o canal focado como favorito (★) | Alterna entre "Continuar" e "Sair" |
 | **OK** | `Enter` | Mostra a tarja | Sintoniza o canal focado e fecha (nas linhas de ajuste, troca o modo ou liga/desliga "Só favoritos ao zapear") | Confirma a opção |
 | **Voltar** | `Esc` | Abre a confirmação de saída | Fecha o guia | Fecha a confirmação |
+| **Info** | `I` | Mostra a tarja (igual ao OK) | — | — |
 | **Menu** / tecla **amarela** | `M` | Alterna ao vivo ↔ fila | — | — |
 
 Observações:
