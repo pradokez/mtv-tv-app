@@ -88,6 +88,20 @@ describe("map", () => {
     expect(map({ key }, state("none"))).toEqual({ type: "none" });
   });
 
+  describe("info", () => {
+    it.each(["Info", "i", "I"])("shows the lower third with %s", (key) => {
+      for (const overlay of ["none", "info"] as const) {
+        expect(map({ key }, state(overlay))).toEqual({ type: "showInfo" });
+      }
+    });
+
+    it.each(["Info", "i"])("%s is ignored in the guide and exit confirmation", (key) => {
+      for (const overlay of ["guide", "exitConfirm"] as const) {
+        expect(map({ key }, state(overlay))).toEqual({ type: "none" });
+      }
+    });
+  });
+
   describe("mode toggle", () => {
     it.each(["m", "M", "ContextMenu", "ColorF2Yellow"])("toggles with %s", (key) => {
       for (const overlay of ["none", "info"] as const) {

@@ -10,7 +10,7 @@ O build do app web (#2) deve ser copiado para **`android/app/src/main/assets/web
 `index.html` na raiz dessa pasta). Basta substituir o conteúdo da pasta e reinstalar.
 
 A casca chama `window.dispatchTvKey(type, key, code, keyCode, androidKeyCode)` a cada tecla
-(setas, OK = `Enter`, Voltar = `Escape`, CH+/CH- = `ChannelUp`/`ChannelDown`, keyCode 427/428; Menu = `ContextMenu` e tecla amarela = `ColorF2Yellow`, que alternam ao vivo/fila) e
+(setas, OK = `Enter`, Voltar = `Escape`, CH+/CH- = `ChannelUp`/`ChannelDown`, keyCode 427/428; Menu = `ContextMenu` e tecla amarela = `ColorF2Yellow`, que alternam ao vivo/fila; Info = `Info`, keyCode 165, que mostra a tarja) e
 também dispara o evento no `document`. Se a função retornar `true`, a tecla foi tratada; no Voltar,
 retornar algo diferente de `true` faz a Activity sair.
 

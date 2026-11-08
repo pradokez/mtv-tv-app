@@ -114,6 +114,7 @@ O app guarda o último canal, os favoritos, o filtro de favoritos e o modo no ar
 | **→** | `→` | Fila: pula o clipe. Ao vivo: avisa "Ao vivo não se pula" (a grade segue o relógio) | Marca/desmarca o canal focado como favorito (★) | Alterna entre "Continuar" e "Sair" |
 | **OK** | `Enter` | Mostra a tarja | Sintoniza o canal focado e fecha (nas linhas de ajuste, troca o modo ou liga/desliga "Só favoritos ao zapear") | Confirma a opção |
 | **Voltar** | `Esc` | Abre a confirmação de saída | Fecha o guia | Fecha a confirmação |
+| **Info** | `I` | Mostra a tarja (igual ao OK) | — | — |
 | **Menu** / tecla **amarela** | `M` | Alterna ao vivo ↔ fila | — | — |
 
 Observações:
@@ -153,7 +154,7 @@ pnpm catalog     # gera o catálogo real (exige YOUTUBE_API_KEY)
 
 - **Build:** `pnpm build` gera `web/dist/` (`index.html`, `assets/`, `catalog.json`), com caminhos relativos.
 - **Origem:** sirva o build pelo `WebViewAssetLoader` (`https://appassets.androidplatform.net/assets/web/index.html`), não por `file://`. O app carrega o catálogo com `fetch`, que não funciona em `file://`, e o player do YouTube exige uma origem HTTP(S).
-- **Teclas:** o app lê só `KeyboardEvent.key`. A casca repassa setas como `ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, OK como `Enter`, Voltar como `Escape`, CH+/CH- como `ChannelUp`/`ChannelDown`, Menu como `ContextMenu` e a tecla amarela como `ColorF2Yellow`.
+- **Teclas:** o app lê só `KeyboardEvent.key`. A casca repassa setas como `ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, OK como `Enter`, Voltar como `Escape`, CH+/CH- como `ChannelUp`/`ChannelDown`, Menu como `ContextMenu`, a tecla amarela como `ColorF2Yellow` e Info como `Info`.
 - **Empacotamento:** a casca carrega `assets/web/index.html`. O conteúdo de `web/dist/` deve chegar a `android/app/src/main/assets/web/` no build do APK (de preferência por uma task Gradle, sem commitar o build).
 - **WebView:** JavaScript e DOM storage ligados, e `mediaPlaybackRequiresUserGesture = false`, para o autoplay com som funcionar.
 

@@ -5,7 +5,7 @@ const NONE: Command = { type: "none" };
 /**
  * Translates a key press into a command, given the current UI state.
  * Covers OK, Back, zapping (arrows, CH+/CH-, PageUp/PageDown as their Mac
- * equivalent), skip and the guide (← opens it; inside, ↑/↓ move, OK selects and
+ * equivalent), skip, Info (lower third) and the guide (← opens it; inside, ↑/↓ move, OK selects and
  * → toggles the favorite). Zapping keeps working under the lower third, which
  * opens on every channel change.
  */
@@ -38,6 +38,10 @@ export function map(event: KeyInput, ui: UiState): Command {
       if (inGuide) return { type: "guideToggle" };
       if (!zappable) return NONE;
       return ui.mode === "queue" ? { type: "skip" } : { type: "skipBlocked" };
+    case "Info":
+    case "i":
+    case "I":
+      return zappable ? { type: "showInfo" } : NONE;
     case "m":
     case "M":
     case "ContextMenu":
