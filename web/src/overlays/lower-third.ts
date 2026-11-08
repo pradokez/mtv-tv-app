@@ -1,12 +1,15 @@
 import type { CommercialSnapshot, VideoSnapshot } from "../catalog/schema";
 
+/** Last line of every lower third: “07 · Anos 80”. */
+const channelLine = (name: string, number: number) => `${String(number).padStart(2, "0")} · ${name}`;
+
 /**
  * Lines of the lower third, one piece of information per line: artist, “song”,
  * channel (number and name). Without artist or song it falls back to the original YouTube title;
  * without any metadata only the channel is shown.
  */
 export function lowerThirdLines(video: VideoSnapshot | undefined, channelName: string, channelNumber: number): string[] {
-  const channel = `${String(channelNumber).padStart(2, "0")} · ${channelName}`;
+  const channel = channelLine(channelName, channelNumber);
   if (video?.artist && video.song) return [video.artist, `“${video.song}”`, channel];
   if (video?.title) return [video.title, channel];
   return [channel];
@@ -21,7 +24,7 @@ export function commercialLines(
   channelName: string,
   channelNumber: number,
 ): string[] {
-  const channel = `${String(channelNumber).padStart(2, "0")} · ${channelName}`;
+  const channel = channelLine(channelName, channelNumber);
   if (!commercial) return [COMMERCIAL_LABEL, channel];
   const detail = [commercial.brand, commercial.title, commercial.year].filter((part) => part !== null).join(" · ");
   return [COMMERCIAL_LABEL, detail, channel];
