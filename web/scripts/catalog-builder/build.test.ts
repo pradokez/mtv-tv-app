@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CATALOG_SCHEMA_VERSION } from "../../src/catalog/schema.ts";
-import { build, noMetaLookup, type BuildInput, type SearchEntry } from "./build.ts";
+import { build, noMetaLookup, type BuildInput, type MetaLookup, type SearchEntry, type VideoLookup } from "./build.ts";
 
 // Valid 11-character YouTube ids.
 const A = "djV11Xbc914";
@@ -16,6 +16,11 @@ const entry = (id: string, fields: Partial<SearchEntry> = {}): SearchEntry => ({
   y: "2011",
   ...fields,
 });
+
+/** A fake metadata source that knows only `known` and spends no quota. */
+const lookupOf =
+  (known: Record<string, VideoLookup>): MetaLookup =>
+  async () => ({ found: new Map(Object.entries(known)), quotaUnits: 0 });
 
 function input(overrides: Partial<BuildInput> = {}): BuildInput {
   return {
@@ -176,12 +181,90 @@ describe("build", () => {
     });
   });
 
-  it("merges what the metadata lookup returns into each video", async () => {
-    const { catalog } = await build(
-      input({ metaLookup: async (ids) => new Map(ids.map((id) => [id, { durationSec: id.length * 10 }])) }),
+  it("merges the duration from the metadata lookup into each video", async () => {
+    const { catalog } = await build(input({ metaLookup: lookupOf({ [A]: { durationSec: 225 } }) }));
+
+    expect(catalog.videos[A]).toEqual({ artist: "a-ha", song: "Take On Me", durationSec: 225 });
+  });
+
+  it("asks the metadata lookup once, for each distinct video", async () => {
+    const asked: string[][] = [];
+    await build(
+      input({
+        playlists: { "80s": [A, B], "90s": [B, C] },
+        metaLookup: async (ids) => {
+          asked.push([...ids]);
+          return { found: new Map(), quotaUnits: 0 };
+        },
+      }),
     );
 
-    expect(catalog.videos[A]).toEqual({ artist: "a-ha", song: "Take On Me", durationSec: 110 });
+    expect(asked).toEqual([[A, B, C]]);
+  });
+
+  it("removes discarded videos from their channels and from the videos map", async () => {
+    const { catalog, report } = await build(
+      input({
+        playlists: { "80s": [A, B, D], "90s": [C, B] },
+        metaLookup: lookupOf({
+          [A]: { durationSec: 225 },
+          [B]: { discard: "não embutível" },
+          [C]: { durationSec: 213 },
+          [D]: { discard: "privado ou removido" },
+        }),
+      }),
+    );
+
+    expect(catalog.channels.map((c) => c.videoIds)).toEqual([[A], [C]]);
+    expect(Object.keys(catalog.videos).sort()).toEqual([A, C].sort());
+    expect(report.videos).toBe(2);
+    expect(report.metadata).toEqual({ artistAndSong: 2, titleOnly: 0, none: 0 });
+  });
+
+  it("omits channels left empty by discards and keeps the order contiguous", async () => {
+    const base = input();
+    const { catalog, report } = await build({
+      ...base,
+      playlists: { "80s": [A, B], "90s": [C], "00s": [D] },
+      channelConfig: {
+        info: { ...base.channelConfig.info, "00s": { name: "00s", icon: "📀" } },
+        sections: [{ id: "decades", channels: ["80s", "90s", "00s"] }],
+      },
+      metaLookup: lookupOf({ [A]: { discard: "sem duração" }, [B]: { discard: "sem duração" } }),
+    });
+
+    expect(catalog.channels.map((c) => [c.id, c.order])).toEqual([
+      ["90s", 0],
+      ["00s", 1],
+    ]);
+    expect(report.droppedChannels).toEqual([{ id: "80s", reason: "vazio" }]);
+  });
+
+  it("counts discarded videos by reason and the quota used", async () => {
+    const { report } = await build(
+      input({
+        playlists: { "80s": [A, B, C, D] },
+        metaLookup: async () => ({
+          found: new Map<string, VideoLookup>([
+            [A, { discard: "privado ou removido" }],
+            [B, { discard: "privado ou removido" }],
+            [C, { discard: "não embutível" }],
+          ]),
+          quotaUnits: 7,
+        }),
+      }),
+    );
+
+    expect(report.discardedVideos).toEqual({ "privado ou removido": 2, "não embutível": 1, "sem duração": 0 });
+    expect(report.quotaUnits).toBe(7);
+    expect(report.videos).toBe(1);
+  });
+
+  it("discards nothing and spends no quota without a metadata source", async () => {
+    const { report } = await build(input());
+
+    expect(report.discardedVideos).toEqual({ "privado ou removido": 0, "não embutível": 0, "sem duração": 0 });
+    expect(report.quotaUnits).toBe(0);
   });
 
   it("ignores the year in the search index (it is the upload year)", async () => {

@@ -36,7 +36,13 @@ export function map(event: KeyInput, ui: UiState): Command {
     case "ArrowRight":
       if (ui.overlay === "exitConfirm") return { type: "exitMove" };
       if (inGuide) return { type: "guideToggle" };
-      return zappable && ui.mode === "queue" ? { type: "skip" } : NONE;
+      if (!zappable) return NONE;
+      return ui.mode === "queue" ? { type: "skip" } : { type: "skipBlocked" };
+    case "m":
+    case "M":
+    case "ContextMenu":
+    case "ColorF2Yellow":
+      return zappable ? { type: "toggleMode" } : NONE;
     default:
       return NONE;
   }

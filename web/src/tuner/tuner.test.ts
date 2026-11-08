@@ -3,6 +3,7 @@ import { parseCatalog } from "../catalog/catalog";
 import type { Clock } from "../lib/clock";
 import { FakePlayer } from "../player/fake-player";
 import { createQueue } from "../queue/queue";
+import { createLiveSchedule } from "../schedule/live-schedule";
 import { createTuner, ZAP_DEBOUNCE_MS } from "./tuner";
 
 const catalog = parseCatalog({
@@ -503,5 +504,195 @@ describe("connection", () => {
 
       expect(ctx.tuner.current()?.channelId).toBe("90s");
     });
+  });
+});
+
+describe("live mode", () => {
+  /** "rock" has durations (live); "plain" has none (queue). Cycle of "rock": 60 s. */
+  const liveCatalog = parseCatalog({
+    schemaVersion: 1,
+    channels: [
+      { id: "rock", name: "Rock", icon: "", order: 0, videoIds: ["a", "b", "c"] },
+      { id: "pop", name: "Pop", icon: "", order: 1, videoIds: ["a", "b", "c"] },
+      { id: "plain", name: "Plain", icon: "", order: 2, videoIds: ["p", "q"] },
+    ],
+    videos: { a: { durationSec: 10 }, b: { durationSec: 20 }, c: { durationSec: 30 }, p: {}, q: {} },
+  });
+  const grid = createLiveSchedule(liveCatalog);
+  const START = 1_700_000_000_000;
+  const CYCLE_MS = 60_000;
+
+  function liveSetup(mode?: "live" | "queue") {
+    const player = new FakePlayer();
+    const clock = fakeClock();
+    clock.advance(START);
+    const tuner = createTuner({ catalog: liveCatalog, player, clock, random: () => 0.5, mode });
+    return { player, clock, tuner };
+  }
+
+  it("is the default mode and starts at the second that is on air now", () => {
+    const { player, clock, tuner } = liveSetup();
+    clock.advance(4_500);
+    const onAir = grid.whatsOn("rock", START + 4_500)!;
+
+    tuner.tune("rock");
+
+    expect(player.loads).toEqual([{ videoId: onAir.videoId, startSec: onAir.offsetSec }]);
+    expect(tuner.mode()).toBe("live");
+  });
+
+  it("plays the next item of the grid from the start when the video ends", () => {
+    const { player, clock, tuner } = liveSetup();
+    tuner.tune("rock");
+    const first = grid.whatsOn("rock", START)!;
+    clock.advance(first.endsAtMs - START);
+
+    player.end();
+
+    expect(player.current).toEqual({ videoId: first.upNext[0]!.videoId, startSec: 0 });
+  });
+
+  it("starts the next item from the start even when the player ends a bit early", () => {
+    const { player, clock, tuner } = liveSetup();
+    tuner.tune("rock");
+    const first = grid.whatsOn("rock", START)!;
+    clock.advance(first.endsAtMs - START - 800);
+
+    player.end();
+
+    expect(player.current).toEqual({ videoId: first.upNext[0]!.videoId, startSec: 0 });
+  });
+
+  it("catches up with the grid when the video ends late", () => {
+    const { player, clock, tuner } = liveSetup();
+    tuner.tune("rock");
+    const first = grid.whatsOn("rock", START)!;
+    const late = first.endsAtMs + 2_000;
+    clock.advance(late - START);
+
+    player.end();
+
+    expect(player.current).toEqual({ videoId: first.upNext[0]!.videoId, startSec: 2 });
+  });
+
+  it("moves on to the next item of the grid when a video fails, leaving the grid untouched", () => {
+    const { player, tuner } = liveSetup();
+    tuner.tune("rock");
+    const first = grid.whatsOn("rock", START)!;
+    const before = grid.whatsOn("rock", START)!;
+
+    player.fail();
+
+    expect(player.current).toEqual({ videoId: first.upNext[0]!.videoId, startSec: 0 });
+    expect(grid.whatsOn("rock", START)).toEqual(before);
+  });
+
+  it("skips several failed videos in a row and never retries them", () => {
+    const { player, clock, tuner } = liveSetup();
+    tuner.tune("rock");
+    const first = grid.whatsOn("rock", START)!;
+    const [second, third] = first.upNext;
+    player.fail();
+    expect(player.current!.videoId).toBe(second!.videoId);
+    player.fail();
+    expect(player.current!.videoId).toBe(third!.videoId);
+
+    clock.advance(CYCLE_MS * 3);
+    tuner.tune("rock");
+
+    const bad = new Set([first.videoId, second!.videoId]);
+    expect(bad.has(player.current!.videoId)).toBe(false);
+  });
+
+  it("falls back to the queue, then to unavailable, when every video failed", () => {
+    const { player, tuner } = liveSetup();
+    tuner.tune("rock");
+    const statuses: string[] = [];
+    tuner.onStatus((s) => statuses.push(s));
+
+    for (let i = 0; i < 3; i++) player.fail();
+
+    expect(tuner.current()).toBeUndefined();
+    expect(statuses).toEqual(["unavailable"]);
+  });
+
+  it("lands further ahead in the programming when coming back after a while", () => {
+    const { player, clock, tuner } = liveSetup();
+    tuner.tune("rock");
+    clock.advance(25_000);
+    tuner.tune("rock");
+
+    const onAir = grid.whatsOn("rock", START + 25_000)!;
+    expect(player.current).toEqual({ videoId: onAir.videoId, startSec: onAir.offsetSec });
+    expect(player.current!.startSec).toBeGreaterThanOrEqual(0);
+  });
+
+  it("reads the clock when the zapping settles, not when it starts", () => {
+    const { player, clock, tuner } = liveSetup();
+    tuner.tune("rock");
+
+    tuner.channelUp();
+    clock.advance(ZAP_DEBOUNCE_MS);
+
+    const onAir = grid.whatsOn("pop", START + ZAP_DEBOUNCE_MS)!;
+    expect(player.current).toEqual({ videoId: onAir.videoId, startSec: onAir.offsetSec });
+  });
+
+  it("ignores skip", () => {
+    const { player, tuner, clock } = liveSetup();
+    tuner.tune("rock");
+
+    tuner.skip();
+    clock.advance(ZAP_DEBOUNCE_MS);
+
+    expect(player.loads).toHaveLength(1);
+  });
+
+  it("plays channels without durations from the queue", () => {
+    const { player, tuner } = liveSetup();
+
+    tuner.tune("plain");
+
+    expect(player.current).toEqual({ videoId: expect.stringMatching(/^[pq]$/), startSec: 0 });
+    expect(tuner.mode()).toBe("queue");
+  });
+
+  it("switches between live and queue right away", () => {
+    const { player, clock, tuner } = liveSetup();
+    clock.advance(3_000);
+    tuner.tune("rock");
+
+    tuner.setMode("queue");
+    expect(tuner.mode()).toBe("queue");
+    expect(player.current!.startSec).toBe(0);
+
+    clock.advance(7_000);
+    tuner.setMode("live");
+    const onAir = grid.whatsOn("rock", START + 10_000)!;
+    expect(tuner.mode()).toBe("live");
+    expect(player.current).toEqual({ videoId: onAir.videoId, startSec: onAir.offsetSec });
+  });
+
+  it("starts in queue mode when asked, and skip works there", () => {
+    const { player, tuner, clock } = liveSetup("queue");
+    tuner.tune("rock");
+
+    tuner.skip();
+    clock.advance(ZAP_DEBOUNCE_MS);
+
+    expect(player.loads).toHaveLength(2);
+    expect(player.current!.startSec).toBe(0);
+  });
+
+  it("resyncs with the grid when the connection comes back", () => {
+    const { player, clock, tuner } = liveSetup();
+    tuner.tune("rock");
+    tuner.setOnline(false);
+    clock.advance(15_000);
+
+    tuner.setOnline(true);
+
+    const onAir = grid.whatsOn("rock", START + 15_000)!;
+    expect(player.current).toEqual({ videoId: onAir.videoId, startSec: onAir.offsetSec });
   });
 });

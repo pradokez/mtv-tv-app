@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Clock } from "../lib/clock";
 import { guideRows } from "./guide";
-import { INFO_DURATION_MS, createOverlays } from "./overlays";
+import { INFO_DURATION_MS, NOTICE_DURATION_MS, createOverlays } from "./overlays";
 
 function fakeClock() {
   let now = 0;
@@ -40,6 +40,29 @@ function setup() {
 describe("overlays", () => {
   it("starts closed", () => {
     expect(setup().overlays.state().overlay).toBe("none");
+  });
+
+  it("shows a brief notice that disappears by itself and keeps any open overlay", () => {
+    const { overlays, advance } = setup();
+    overlays.showInfo(lines);
+
+    overlays.showNotice("Ao vivo");
+    expect(overlays.state()).toMatchObject({ overlay: "info", notice: "Ao vivo" });
+
+    advance(NOTICE_DURATION_MS);
+    expect(overlays.state().notice).toBeUndefined();
+    expect(overlays.state().overlay).toBe("info");
+  });
+
+  it("restarts the notice timer when a new notice replaces the old one", () => {
+    const { overlays, advance } = setup();
+    overlays.showNotice("Ao vivo");
+    advance(NOTICE_DURATION_MS - 100);
+
+    overlays.showNotice("Fila");
+    advance(NOTICE_DURATION_MS - 100);
+
+    expect(overlays.state().notice).toBe("Fila");
   });
 
   it("hides the lower third on demand", () => {

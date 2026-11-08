@@ -18,7 +18,7 @@ pnpm dev         # http://localhost:5173 — abre no último canal visto (no pri
 pnpm test        # Vitest
 pnpm typecheck   # tsc estrito
 pnpm build       # gera web/dist/
-pnpm catalog     # baixa os dados do site e gera o catálogo real
+pnpm catalog     # baixa os dados do site e gera o catálogo real (exige YOUTUBE_API_KEY)
 ```
 
 - **Tela cheia no Mac:** ⌃⌘F no navegador. O app ocupa a janela inteira e não usa a Fullscreen API, que exige um gesto do usuário.
@@ -28,6 +28,7 @@ pnpm catalog     # baixa os dados do site e gera o catálogo real
 - **Sem rede ou sem YouTube:** `http://localhost:5173/?player=fake` troca o player por um painel com o vídeo atual e botões "Terminar" e "Erro".
 - **Vídeo com erro e sem internet:** um vídeo que falha é pulado e não volta na sessão. Se todos os vídeos de um canal falham, aparece "Nenhum clipe disponível neste canal" (no `?player=fake`, aperte "Erro" até esgotar o canal). Para simular falta de internet, use DevTools → Network → Offline: aparece "Sem conexão com a internet" e, ao voltar a rede, o clipe atual recomeça sozinho.
 - **Catálogo:** `pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git e nunca deve ser commitado nem publicado (a curadoria é do criador do site). Sem ele, `pnpm dev` e `pnpm build` usam o catálogo de exemplo `web/fixtures/catalog.example.json`. O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
+- **Durações (YouTube Data API):** o `pnpm catalog` consulta a duração e o status de embed de cada vídeo na YouTube Data API v3, então precisa de uma chave: `YOUTUBE_API_KEY=... pnpm catalog` (crie a chave no Google Cloud Console com a YouTube Data API v3 ativada). A chave só é lida da variável de ambiente; nunca a coloque no repositório. Vídeos privados, removidos, não embutíveis ou sem duração (ex.: lives) ficam fora do snapshot, e canais que ficam vazios são omitidos; o relatório conta os descartes por motivo e mostra a cota usada. Cada consulta pede 50 vídeos e custa 1 unidade: a primeira execução gasta ~2.150 unidades (a cota diária padrão é 10.000). As respostas ficam em `web/.cache/youtube-meta.json` (ignorado pelo git) e o cache é gravado após cada lote: se a execução parar no meio (cota, rede), rodar de novo continua de onde parou, e execuções seguintes só consultam vídeos novos. Para consultar tudo de novo, apague o arquivo.
 - O app não faz nenhuma requisição ao site original do catálogo: a CSP do `index.html` só libera o próprio app e o player do YouTube, e um teste falha se o código do app citar o domínio. Só o `pnpm catalog` (em `web/scripts/catalog-builder/`) consulta o site, e outro teste falha se qualquer arquivo do projeto citar os endpoints de contagem/telemetria.
 
 ## Contrato com a casca Android

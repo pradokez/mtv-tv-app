@@ -30,8 +30,26 @@ describe("preferences", () => {
     expect(createPreferences(storage).lastChannel()).toBe("90s");
   });
 
+  it("defaults to live mode and remembers the chosen mode", () => {
+    const storage = memoryStorage();
+    expect(createPreferences(storage).mode()).toBe("live");
+
+    createPreferences(storage).setMode("queue");
+
+    expect(createPreferences(storage).mode()).toBe("queue");
+  });
+
+  it("falls back to live mode when the stored value is invalid", () => {
+    const storage = memoryStorage();
+    storage.setItem("mtv-tv.mode", "bogus");
+
+    expect(createPreferences(storage).mode()).toBe("live");
+  });
+
   it("survives a storage that throws", () => {
     const preferences = createPreferences(brokenStorage);
+    expect(() => preferences.setMode("queue")).not.toThrow();
+    expect(preferences.mode()).toBe("live");
 
     expect(() => preferences.setLastChannel("90s")).not.toThrow();
     expect(preferences.lastChannel()).toBeUndefined();

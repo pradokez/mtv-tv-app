@@ -1,4 +1,4 @@
-import { seededRandom } from "../lib/seeded-random";
+import { seededShuffle } from "../lib/shuffle";
 
 /**
  * Shuffled play order for one channel (queue mode). Plays every video once
@@ -39,13 +39,7 @@ export function createQueue(videoIds: readonly string[], seed: number): Queue {
   return { next, skip: next, current: () => currentId };
 }
 
-/** Fisher-Yates with a per-cycle seed derived from the channel seed. */
+/** Per-cycle shuffle, with a seed derived from the channel seed. */
 function shuffle(videoIds: readonly string[], seed: number, cycle: number): string[] {
-  const random = seededRandom(seed + Math.imul(cycle, 0x9e3779b1));
-  const result = [...videoIds];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [result[i], result[j]] = [result[j]!, result[i]!];
-  }
-  return result;
+  return seededShuffle(videoIds, seed + Math.imul(cycle, 0x9e3779b1));
 }

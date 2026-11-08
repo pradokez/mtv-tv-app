@@ -4,7 +4,7 @@ import {
   type ChannelSnapshot,
   type VideoSnapshot,
 } from "../../src/catalog/schema.ts";
-import type { ChannelConfig } from "./channel-config.ts";
+import type { ChannelConfig, ChannelInfo } from "./channel-config.ts";
 
 /** One entry of the site's search index. `y` is the upload year and is never used. */
 export interface SearchEntry {
@@ -18,11 +18,25 @@ export interface SearchEntry {
   y?: string;
 }
 
-/** Extra metadata per video id (e.g. duration from the YouTube Data API). */
-export type MetaLookup = (ids: readonly string[]) => Promise<ReadonlyMap<string, Pick<VideoSnapshot, "durationSec">>>;
+/** Why a video is left out of the snapshot: the TV could never play it. */
+export const DISCARD_REASONS = ["privado ou removido", "não embutível", "sem duração"] as const;
+export type DiscardReason = (typeof DISCARD_REASONS)[number];
 
-/** This slice fetches no extra metadata. */
-export const noMetaLookup: MetaLookup = async () => new Map();
+/** What the metadata source knows about one video: its duration, or why it must go. */
+export type VideoLookup = { durationSec: number } | { discard: DiscardReason };
+
+export interface MetaLookupResult {
+  /** Ids missing here are kept, without extra metadata. */
+  found: ReadonlyMap<string, VideoLookup>;
+  /** API quota spent by this run. */
+  quotaUnits: number;
+}
+
+/** Extra metadata per video id (e.g. duration from the YouTube Data API). */
+export type MetaLookup = (ids: readonly string[]) => Promise<MetaLookupResult>;
+
+/** Fetches no extra metadata: every video is kept, without duration. */
+export const noMetaLookup: MetaLookup = async () => ({ found: new Map(), quotaUnits: 0 });
 
 export interface BuildInput {
   /** Channel id → YouTube video ids, as published by the site. */
@@ -48,8 +62,12 @@ export interface BuildReport {
   invalidIds: number;
   /** Repeats of an id within the same channel. */
   duplicateIds: number;
+  /** Distinct videos left out because the TV could not play them. */
+  discardedVideos: Record<DiscardReason, number>;
   /** What the overlay will have to show, per video. */
   metadata: { artistAndSong: number; titleOnly: number; none: number };
+  /** YouTube Data API quota spent by this run (cached answers cost nothing). */
+  quotaUnits: number;
   warnings: string[];
 }
 
@@ -76,11 +94,13 @@ export async function build(input: BuildInput): Promise<BuildResult> {
     droppedChannels: [],
     invalidIds: 0,
     duplicateIds: 0,
+    discardedVideos: Object.fromEntries(DISCARD_REASONS.map((r) => [r, 0])) as Record<DiscardReason, number>,
     metadata: { artistAndSong: 0, titleOnly: 0, none: 0 },
+    quotaUnits: 0,
     warnings: [],
   };
 
-  const channels: ChannelSnapshot[] = [];
+  const candidates: { id: string; info: ChannelInfo; videoIds: string[] }[] = [];
   for (const [id, playlist] of byChannelOrder(input.playlists, input.channelConfig)) {
     const info = input.channelConfig.info[id];
     if (!info) {
@@ -98,24 +118,44 @@ export async function build(input: BuildInput): Promise<BuildResult> {
       report.droppedChannels.push({ id, reason: "vazio" });
       continue;
     }
+    candidates.push({ id, info, videoIds: [...videoIds] });
+  }
+
+  const extra = await input.metaLookup([...new Set(candidates.flatMap((c) => c.videoIds))]);
+  report.quotaUnits = extra.quotaUnits;
+  const discarded = new Set<string>();
+  for (const [id, lookup] of extra.found) {
+    if ("discard" in lookup) {
+      discarded.add(id);
+      report.discardedVideos[lookup.discard]++;
+    }
+  }
+
+  const channels: ChannelSnapshot[] = [];
+  for (const { id, info, videoIds } of candidates) {
+    const kept = videoIds.filter((videoId) => !discarded.has(videoId));
+    if (kept.length === 0) {
+      report.droppedChannels.push({ id, reason: "vazio" });
+      continue;
+    }
     let icon = info.icon;
     if (icon.trimStart().startsWith("<")) {
       icon = HTML_ICON_REPLACEMENT;
       report.warnings.push(`canal ${id}: ícone em HTML trocado por ${HTML_ICON_REPLACEMENT}`);
     }
-    channels.push({ id, name: info.name, icon, order: channels.length, videoIds: [...videoIds] });
+    channels.push({ id, name: info.name, icon, order: channels.length, videoIds: kept });
   }
 
   const ids = [...new Set(channels.flatMap((c) => c.videoIds))];
   const index = new Map(input.searchIndex.map((e) => [e.id, e]));
-  const extra = await input.metaLookup(ids);
   const videos: Record<string, VideoSnapshot> = {};
   for (const id of ids) {
     const meta = displayMeta(index.get(id));
     if (meta.artist) report.metadata.artistAndSong++;
     else if (meta.title) report.metadata.titleOnly++;
     else report.metadata.none++;
-    videos[id] = { ...meta, ...extra.get(id) };
+    const lookup = extra.found.get(id);
+    videos[id] = lookup && "durationSec" in lookup ? { ...meta, durationSec: lookup.durationSec } : meta;
   }
 
   report.channels = channels.length;

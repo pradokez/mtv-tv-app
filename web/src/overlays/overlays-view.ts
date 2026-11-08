@@ -21,8 +21,13 @@ export function mountOverlaysView(root: HTMLElement): (state: OverlayState) => v
   options.append(optionEls.exit, optionEls.continue);
   dialog.append(question, options);
 
+  const notice = document.createElement("div");
+  notice.className = "notice";
+  notice.setAttribute("role", "status");
+  notice.hidden = true;
+
   const guide = createGuideView();
-  root.append(lowerThird, guide.el, dialog);
+  root.append(lowerThird, guide.el, dialog, notice);
 
   return (state) => {
     guide.render(state);
@@ -36,6 +41,8 @@ export function mountOverlaysView(root: HTMLElement): (state: OverlayState) => v
         }),
       );
     }
+    notice.hidden = state.notice === undefined;
+    if (state.notice !== undefined) notice.textContent = state.notice;
     dialog.hidden = state.overlay !== "exitConfirm";
     optionEls.exit.classList.toggle("selected", state.exitChoice === "exit");
     optionEls.continue.classList.toggle("selected", state.exitChoice === "continue");
