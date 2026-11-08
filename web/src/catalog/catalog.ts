@@ -1,6 +1,7 @@
 import {
   CATALOG_SCHEMA_VERSION,
   type ChannelSnapshot,
+  type CommercialSnapshot,
   type VideoSnapshot,
 } from "./schema";
 
@@ -9,6 +10,9 @@ export interface Catalog {
   channels(): readonly ChannelSnapshot[];
   channel(id: string): ChannelSnapshot | undefined;
   video(id: string): VideoSnapshot | undefined;
+  /** Commercials for the breaks between clips, in snapshot order. Never channels. */
+  commercials(): readonly CommercialSnapshot[];
+  commercial(id: string): CommercialSnapshot | undefined;
 }
 
 /** The snapshot can't be used by this version of the app. */
@@ -44,12 +48,42 @@ export function parseCatalog(input: unknown): Catalog {
     .filter((c) => c.videoIds.length > 0)
     .sort((a, b) => a.order - b.order);
   const channelsById = new Map(channels.map((c) => [c.id, c]));
+  const commercials = toCommercials(snapshot.commercials);
+  const commercialsById = new Map(commercials.map((c) => [c.id, c]));
 
   return {
     channels: () => channels,
     channel: (id) => channelsById.get(id),
     video: (id) => videosById.get(id),
+    commercials: () => commercials,
+    commercial: (id) => commercialsById.get(id),
   };
+}
+
+/** Absent means no breaks; a repeated id keeps its first entry. */
+function toCommercials(raw: unknown): CommercialSnapshot[] {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) throw malformed("`commercials` deve ser uma lista");
+  const seen = new Set<string>();
+  const list: CommercialSnapshot[] = [];
+  raw.forEach((entry, index) => {
+    if (
+      !isRecord(entry) ||
+      typeof entry.id !== "string" ||
+      typeof entry.brand !== "string" ||
+      typeof entry.title !== "string" ||
+      (entry.year !== null && typeof entry.year !== "number") ||
+      typeof entry.durationSec !== "number" ||
+      !Number.isFinite(entry.durationSec) ||
+      entry.durationSec <= 0
+    ) {
+      throw malformed(`comercial na posição ${index} inválido`);
+    }
+    if (seen.has(entry.id)) return;
+    seen.add(entry.id);
+    list.push({ id: entry.id, brand: entry.brand, title: entry.title, year: entry.year, durationSec: entry.durationSec });
+  });
+  return list;
 }
 
 function toChannel(raw: unknown, index: number): ChannelSnapshot {

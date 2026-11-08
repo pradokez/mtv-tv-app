@@ -5,6 +5,7 @@ import type { Random } from "../lib/random";
 import { createEmitter, type PlayerAdapter, type Unsubscribe } from "../player/player";
 import type { PlaybackMode } from "../preferences/preferences";
 import { createQueue, type Queue } from "../queue/queue";
+import { DEFAULT_BREAK_RULE, type BreakRule } from "../schedule/breaks";
 import { createLiveSchedule, type LiveSchedule, type LiveSlot } from "../schedule/live-schedule";
 
 /** How long zapping must stay quiet before the video of the landing channel loads. */
@@ -20,11 +21,15 @@ export interface TunerDeps {
   schedule?: LiveSchedule;
   /** Starting mode. Defaults to live. */
   mode?: PlaybackMode;
+  /** When breaks air in queue mode. The live grid has its own rule. */
+  breaks?: BreakRule;
 }
 
 export interface NowPlaying {
   channelId: string;
   videoId: string;
+  /** A clip of the channel, or a commercial of a break between clips. */
+  kind: "clip" | "commercial";
 }
 
 /** `unavailable`: every video of the tuned channel failed this session, so nothing plays. */
@@ -38,6 +43,10 @@ export type TunerStatus = "playing" | "unavailable";
  * channel continues where its queue left off. Videos that failed are never
  * tried again in the session, on any channel; in live mode the grid itself is
  * left alone and the next item of the grid plays instead.
+ *
+ * Commercial breaks air between clips: in live mode they are part of the grid;
+ * in queue mode a break of a few commercials follows every few clips. Tuning,
+ * zapping, skipping or switching mode always lands on a clip, never in a break.
  */
 export interface Tuner {
   /** Switches to a channel right away. Throws for unknown ids. */
@@ -91,6 +100,7 @@ export function createTuner({
   random,
   schedule: grid = createLiveSchedule(catalog),
   mode: initialMode = "live",
+  breaks = DEFAULT_BREAK_RULE,
 }: TunerDeps): Tuner {
   let chosenMode = initialMode;
   /** Grid slot being played; set only while the channel plays live. */
@@ -98,6 +108,11 @@ export function createTuner({
   const queues = new Map<string, Queue>();
   let channel: ChannelSnapshot | undefined;
   let videoId: string | undefined;
+  let kind: NowPlaying["kind"] = "clip";
+  /** Queue mode: clips played since the last break, and commercials still due in the current one. */
+  let clipsSinceBreak = 0;
+  let commercialsLeft = 0;
+  let commercialQueue: Queue | undefined;
   let pending: Pending | undefined;
   let timer: TimerId | undefined;
   let status: TunerStatus | undefined;
@@ -121,6 +136,17 @@ export function createTuner({
       queues.set(target.id, queue);
     }
     return queue;
+  };
+
+  /** Next commercial that has not failed, or `undefined` when there are none (or all failed). */
+  const nextCommercial = (): string | undefined => {
+    const ids = catalog.commercials().map((c) => c.id);
+    if (ids.every((id) => bad.has(id))) return undefined;
+    commercialQueue ??= createQueue(ids, Math.floor(random() * 2 ** 32));
+    let next = commercialQueue.next();
+    // Ends: at least one commercial is still playable.
+    while (bad.has(next)) next = commercialQueue.next();
+    return next;
   };
 
   const lookup = (channelId: string): ChannelSnapshot => {
@@ -151,14 +177,21 @@ export function createTuner({
   const isLive = (target: ChannelSnapshot) =>
     chosenMode === "live" && grid.scheduledIds(target.id).length > 0;
 
-  const load = (next: ChannelSnapshot, nextVideoId: string | undefined, startSec = 0, nextSlot?: LiveSlot) => {
+  const load = (
+    next: ChannelSnapshot,
+    nextVideoId: string | undefined,
+    startSec = 0,
+    nextSlot?: LiveSlot,
+    nextKind: NowPlaying["kind"] = nextSlot?.kind ?? "clip",
+  ) => {
     channel = next;
     videoId = nextVideoId;
+    kind = nextKind;
     slot = nextSlot;
     if (!nextVideoId) return setStatus("unavailable");
     player.load(nextVideoId, startSec);
     setStatus("playing");
-    started.emit({ channelId: next.id, videoId: nextVideoId });
+    started.emit({ channelId: next.id, videoId: nextVideoId, kind: nextKind });
   };
 
   /**
@@ -170,8 +203,10 @@ export function createTuner({
     const ids = grid.scheduledIds(target.id);
     let at = atMs;
     let onAir = grid.whatsOn(target.id, at, 0)!;
-    // Two cycles contain every video of the grid, so this finds a playable one if any is.
-    for (let i = 0; i < 2 * ids.length && bad.has(onAir.videoId); i++) {
+    // Without a playable clip there is nothing to air, commercials or not.
+    if (ids.every((id) => bad.has(id))) return load(target, nextPlayable(target));
+    // Two cycles contain every item of the grid, so this finds a playable one if any is.
+    for (let i = 0; i < 2 * grid.itemsPerCycle(target.id) && bad.has(onAir.videoId); i++) {
       at = onAir.endsAtMs;
       onAir = grid.whatsOn(target.id, at, 0)!;
     }
@@ -181,6 +216,8 @@ export function createTuner({
 
   /** Loads what plays next on `target` right now, following the grid or the queue. */
   const playNow = (target: ChannelSnapshot, drawn?: string) => {
+    commercialsLeft = 0;
+    if (target.id !== channel?.id) clipsSinceBreak = 0;
     if (isLive(target)) playLive(target, clock.now());
     else load(target, nextPlayable(target, drawn));
   };
@@ -218,8 +255,18 @@ export function createTuner({
   const advance = () => {
     if (!channel || !videoId) return;
     // Never earlier than the end of the clip that was playing: the next one starts from its beginning.
-    if (slot && isLive(channel)) playLive(channel, Math.max(clock.now(), slot.endsAtMs));
-    else load(channel, nextPlayable(channel));
+    if (slot && isLive(channel)) return playLive(channel, Math.max(clock.now(), slot.endsAtMs));
+    if (kind === "clip" && ++clipsSinceBreak >= breaks.every) {
+      clipsSinceBreak = 0;
+      commercialsLeft = breaks.size;
+    }
+    const commercial = commercialsLeft > 0 ? nextCommercial() : undefined;
+    if (commercial) {
+      commercialsLeft--;
+      return load(channel, commercial, 0, undefined, "commercial");
+    }
+    commercialsLeft = 0;
+    load(channel, nextPlayable(channel));
   };
 
   const tuner: Tuner = {
@@ -260,7 +307,7 @@ export function createTuner({
     },
     onNowPlaying: (listener) => started.on(listener),
     current() {
-      return channel && videoId ? { channelId: channel.id, videoId } : undefined;
+      return channel && videoId ? { channelId: channel.id, videoId, kind } : undefined;
     },
     setOnline(next) {
       const reconnected = next && !online;

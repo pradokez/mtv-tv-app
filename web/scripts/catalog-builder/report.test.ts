@@ -11,6 +11,7 @@ const report: BuildReport = {
   discardedVideos: { "privado ou removido": 1500, "não embutível": 12, "sem duração": 0 },
   metadata: { artistAndSong: 1000, titleOnly: 150, none: 50 },
   quotaUnits: 2150,
+  commercials: { kept: 48, discarded: { "privado ou removido": 2, "não embutível": 1, "sem duração": 0 } },
   warnings: [],
 };
 
@@ -35,5 +36,17 @@ describe("formatReport", () => {
 
   it("counts only the videos kept as valid", () => {
     expect(formatReport(report)).toContain("Vídeos: 1.200");
+  });
+
+  it("reports the commercials kept and discarded", () => {
+    expect(formatReport(report)).toContain(
+      [
+        "Comerciais:",
+        "  mantidos: 48",
+        "  privados ou removidos: 2",
+        "  não embutíveis: 1",
+        "  sem duração: 0",
+      ].join("\n"),
+    );
   });
 });

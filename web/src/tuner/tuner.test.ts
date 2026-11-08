@@ -132,7 +132,7 @@ describe("tuner", () => {
     tuner.tune("80s");
     player.end();
 
-    expect(tuner.current()).toEqual({ channelId: "80s", videoId: orderOf("80s", 2)[1] });
+    expect(tuner.current()).toEqual({ channelId: "80s", kind: "clip", videoId: orderOf("80s", 2)[1] });
   });
 
   describe("zapping", () => {
@@ -278,7 +278,7 @@ describe("tuner", () => {
       tuner.skip();
       clock.advance(ZAP_DEBOUNCE_MS);
 
-      expect(tuner.current()).toEqual({ channelId: "00s", videoId: orderOf("00s", 2)[1] });
+      expect(tuner.current()).toEqual({ channelId: "00s", kind: "clip", videoId: orderOf("00s", 2)[1] });
     });
   });
 });
@@ -696,3 +696,187 @@ describe("live mode", () => {
     expect(player.current).toEqual({ videoId: onAir.videoId, startSec: onAir.offsetSec });
   });
 });
+
+describe("tuner with commercial breaks", () => {
+  const RULE = { every: 2, size: 2 };
+  const spots = ["m1", "m2", "m3"];
+  const withSpots = (extra: object = {}) =>
+    parseCatalog({
+      schemaVersion: 1,
+      channels: [
+        { id: "80s", name: "80s", icon: "", order: 0, videoIds: ["a", "b", "c", "d", "e", "f"] },
+        { id: "90s", name: "90s", icon: "", order: 1, videoIds: ["x", "y", "z"] },
+      ],
+      videos: { a: {}, b: {}, c: {}, d: {}, e: {}, f: {}, x: {}, y: {}, z: {} },
+      commercials: spots.map((id) => ({ id, brand: "Marca", title: id, year: 1990, durationSec: 30 })),
+      ...extra,
+    });
+
+  function setupBreaks(fromCatalog = withSpots()) {
+    const player = new FakePlayer();
+    const clock = fakeClock();
+    const tuner = createTuner({ catalog: fromCatalog, player, clock, random: () => 0.5, breaks: RULE });
+    const started: { videoId: string; kind: string }[] = [];
+    tuner.onNowPlaying((n) => started.push({ videoId: n.videoId, kind: n.kind }));
+    return { player, clock, tuner, started };
+  }
+  const kinds = (started: { kind: string }[]) => started.map((s) => (s.kind === "clip" ? "C" : "X")).join("");
+
+  it("airs a break of commercials after every N clips in queue mode", () => {
+    const { player, tuner, started } = setupBreaks();
+    tuner.tune("80s");
+
+    for (let i = 0; i < 9; i++) player.end();
+
+    expect(kinds(started)).toBe("CCXXCCXXCC");
+  });
+
+  it("goes through all the commercials before repeating one", () => {
+    const { player, tuner, started } = setupBreaks();
+    tuner.tune("80s");
+
+    for (let i = 0; i < 12; i++) player.end();
+
+    const aired = started.filter((s) => s.kind === "commercial").map((s) => s.videoId);
+    expect(aired).toHaveLength(6);
+    expect([...aired.slice(0, 3)].sort()).toEqual(spots);
+    expect([...aired.slice(3, 6)].sort()).toEqual(spots);
+  });
+
+  it("reports the commercial as current, with its kind", () => {
+    const { player, tuner } = setupBreaks();
+    tuner.tune("80s");
+    player.end();
+    player.end();
+
+    expect(spots).toContain(tuner.current()?.videoId);
+    expect(tuner.current()?.kind).toBe("commercial");
+  });
+
+  it("never retries a commercial that failed and keeps the break going", () => {
+    const { player, tuner, started } = setupBreaks();
+    tuner.tune("80s");
+    player.end();
+    player.end();
+    const failed = player.current!.videoId;
+
+    player.fail();
+    for (let i = 0; i < 12; i++) player.end();
+
+    expect(kinds(started).slice(0, 5)).toBe("CCXXC");
+    expect(started.slice(3).some((s) => s.videoId === failed)).toBe(false);
+  });
+
+  it("skips the whole break when skipping during a commercial", () => {
+    const { player, clock, tuner, started } = setupBreaks();
+    tuner.tune("80s");
+    player.end();
+    player.end();
+
+    tuner.skip();
+    clock.advance(ZAP_DEBOUNCE_MS);
+
+    expect(kinds(started)).toBe("CCXC");
+  });
+
+  it("starts counting again on a channel it just tuned to", () => {
+    const { player, tuner, started } = setupBreaks();
+    tuner.tune("80s");
+    player.end();
+
+    tuner.tune("90s");
+    player.end();
+    player.end();
+
+    expect(kinds(started)).toBe("CCCCX");
+  });
+
+  it("stops airing breaks once every commercial has failed", () => {
+    const { player, tuner, started } = setupBreaks();
+    tuner.tune("80s");
+
+    for (let i = 0; i < 30; i++) {
+      if (spots.includes(player.current!.videoId)) player.fail();
+      else player.end();
+    }
+
+    expect(started.slice(-8).every((s) => s.kind === "clip")).toBe(true);
+  });
+
+  it("plays no break when the catalog has no commercials", () => {
+    const { player, tuner, started } = setupBreaks(withSpots({ commercials: [] }));
+    tuner.tune("80s");
+
+    for (let i = 0; i < 6; i++) player.end();
+
+    expect(started.every((s) => s.kind === "clip")).toBe(true);
+  });
+});
+
+describe("tuner with commercial breaks in live mode", () => {
+  const RULE = { every: 2, size: 2 };
+  // Two 60 s clips plus one break of 2 x 20 s commercials: a 160 s cycle.
+  const live = parseCatalog({
+    schemaVersion: 1,
+    channels: [{ id: "tv", name: "TV", icon: "", order: 0, videoIds: ["a", "b"] }],
+    videos: { a: { durationSec: 60 }, b: { durationSec: 60 } },
+    commercials: ["m1", "m2", "m3"].map((id) => ({ id, brand: "Marca", title: id, year: 1990, durationSec: 20 })),
+  });
+
+  function setupLive() {
+    const player = new FakePlayer();
+    const clock = fakeClock();
+    const schedule = createLiveSchedule(live, { breaks: RULE });
+    const tuner = createTuner({ catalog: live, player, clock, random: () => 0.5, schedule, breaks: RULE });
+    const started: { videoId: string; kind: string }[] = [];
+    tuner.onNowPlaying((n) => started.push({ videoId: n.videoId, kind: n.kind }));
+    return { player, clock, tuner, schedule, started };
+  }
+
+  /** First instant of the first cycle at which a commercial airs, plus 5 s. */
+  const insideBreak = (schedule: ReturnType<typeof createLiveSchedule>) => {
+    let t = 0;
+    while (schedule.whatsOn("tv", t)!.kind !== "commercial") t += 1000;
+    return t + 5000;
+  };
+
+  it("tunes into the commercial that is on air, from the right second", () => {
+    const { player, clock, tuner, schedule, started } = setupLive();
+    const at = insideBreak(schedule);
+    clock.advance(at);
+
+    tuner.tune("tv");
+
+    const onAir = schedule.whatsOn("tv", at)!;
+    expect(player.current).toEqual({ videoId: onAir.videoId, startSec: onAir.offsetSec });
+    expect(started.at(-1)).toEqual({ videoId: onAir.videoId, kind: "commercial" });
+  });
+
+  it("follows the grid from the commercial to what comes after it", () => {
+    const { player, clock, tuner, schedule } = setupLive();
+    const at = insideBreak(schedule);
+    clock.advance(at);
+    tuner.tune("tv");
+    const onAir = schedule.whatsOn("tv", at)!;
+
+    clock.advance(onAir.endsAtMs - at);
+    player.end();
+
+    const next = schedule.whatsOn("tv", onAir.endsAtMs)!;
+    expect(player.current).toEqual({ videoId: next.videoId, startSec: 0 });
+  });
+
+  it("moves on to the next item of the grid when a commercial fails", () => {
+    const { player, clock, tuner, schedule } = setupLive();
+    const at = insideBreak(schedule);
+    clock.advance(at);
+    tuner.tune("tv");
+    const onAir = schedule.whatsOn("tv", at)!;
+
+    player.fail();
+
+    const next = schedule.whatsOn("tv", onAir.endsAtMs)!;
+    expect(player.current!.videoId).toBe(next.videoId);
+  });
+});
+

@@ -93,7 +93,7 @@ describe("live schedule", () => {
     for (const slot of now.upNext) {
       expect(slot.startsAtMs).toBe(end);
       const onAir = schedule.whatsOn("rock", slot.startsAtMs)!;
-      expect(slot).toEqual({ videoId: onAir.videoId, startsAtMs: onAir.startsAtMs, endsAtMs: onAir.endsAtMs });
+      expect(slot).toEqual({ videoId: onAir.videoId, kind: onAir.kind, startsAtMs: onAir.startsAtMs, endsAtMs: onAir.endsAtMs });
       end = slot.endsAtMs;
     }
   });
@@ -125,5 +125,127 @@ describe("live schedule", () => {
     expect(schedule.scheduledIds("bare")).toEqual([]);
     expect(schedule.whatsOn("bare", T0)).toBeUndefined();
     expect(schedule.whatsOn("missing", T0)).toBeUndefined();
+  });
+});
+
+/**
+ * Channel "big": ten 60 s clips k0..k9. Six 20 s commercials m0..m5.
+ * With the rule { every: 4, size: 2 } that is 3 breaks of 2 commercials per cycle,
+ * so a cycle lasts 600 s + 6 * 20 s = 720 s.
+ */
+describe("live schedule with commercial breaks", () => {
+  const clips = Array.from({ length: 10 }, (_, i) => `k${i}`);
+  const spots = Array.from({ length: 6 }, (_, i) => `m${i}`);
+  const build = (commercialIds: string[] = spots, channelClips = clips) =>
+    parseCatalog({
+      schemaVersion: 1,
+      channels: [{ id: "big", name: "Big", icon: "", order: 0, videoIds: channelClips }],
+      videos: Object.fromEntries(channelClips.map((id) => [id, { durationSec: 60 }])),
+      commercials: commercialIds.map((id) => ({ id, brand: "Marca", title: id, year: 1990, durationSec: 20 })),
+    });
+  const RULE = { every: 4, size: 2 };
+  const CYCLE = 720_000;
+  const START = 1_700_000_000_000 - (1_700_000_000_000 % CYCLE);
+
+  /** Items of the cycle starting at `startMs`, in air order. */
+  function cycleItems(schedule: ReturnType<typeof createLiveSchedule>, cycle: number) {
+    const items: { videoId: string; kind: string }[] = [];
+    let t = START + cycle * CYCLE;
+    while (t < START + (cycle + 1) * CYCLE) {
+      const slot = schedule.whatsOn("big", t)!;
+      items.push({ videoId: slot.videoId, kind: slot.kind });
+      t = slot.endsAtMs;
+      expect(t).toBeLessThanOrEqual(START + (cycle + 1) * CYCLE); // the cycle ends exactly on the boundary
+    }
+    return items;
+  }
+
+  it("airs a break after the 4th, 7th and 10th clip of the cycle", () => {
+    const items = cycleItems(createLiveSchedule(build(), { breaks: RULE }), 3);
+
+    const kinds = items.map((i) => (i.kind === "clip" ? "C" : "X")).join("");
+    expect(kinds).toBe("CCCCXXCCCXXCCCXX");
+  });
+
+  it("keeps every cycle exactly 720 s long, so the clock alone says where we are", () => {
+    const schedule = createLiveSchedule(build(), { breaks: RULE });
+    for (let cycle = 0; cycle < 20; cycle++) {
+      expect(schedule.whatsOn("big", START + cycle * CYCLE)!.startsAtMs).toBe(START + cycle * CYCLE);
+    }
+  });
+
+  it("plays each clip once per cycle and the same commercials every cycle, in a different order", () => {
+    const schedule = createLiveSchedule(build(), { breaks: RULE });
+    const cycles = Array.from({ length: 25 }, (_, c) => cycleItems(schedule, c));
+    for (const items of cycles) {
+      expect(items.filter((i) => i.kind === "clip").map((i) => i.videoId).sort()).toEqual(clips);
+      expect(items.filter((i) => i.kind === "commercial").map((i) => i.videoId).sort()).toEqual(spots);
+    }
+    const orders = new Set(cycles.map((items) => items.filter((i) => i.kind === "commercial").map((i) => i.videoId).join()));
+    expect(orders.size).toBeGreaterThan(1);
+  });
+
+  it("answers identically on any instance, inside a break too", () => {
+    const inBreak = START + 4 * 60_000 + 25_000; // 5 s into the second commercial
+    const a = createLiveSchedule(build(), { breaks: RULE }).whatsOn("big", inBreak)!;
+    const b = createLiveSchedule(build(), { breaks: RULE }).whatsOn("big", inBreak)!;
+
+    expect(a).toEqual(b);
+    expect(a.kind).toBe("commercial");
+    expect(a.offsetSec).toBe(5);
+  });
+
+  it("never repeats a commercial within the same break, even with fewer commercials than slots", () => {
+    const schedule = createLiveSchedule(build(["m0", "m1", "m2"]), { breaks: RULE });
+    for (let cycle = 0; cycle < 40; cycle++) {
+      const items = cycleItems(schedule, cycle);
+      const breaks = items.map((i) => (i.kind === "commercial" ? i.videoId : "|")).join(",").split("|").map((b) => b.split(",").filter(Boolean));
+      for (const group of breaks.filter((g) => g.length > 0)) expect(new Set(group).size).toBe(group.length);
+    }
+  });
+
+  it("repeats the only commercial when a break has more slots than commercials", () => {
+    const schedule = createLiveSchedule(build(["m0"]), { breaks: RULE });
+
+    const commercials = cycleItems(schedule, 2).filter((i) => i.kind === "commercial");
+
+    expect(commercials.map((i) => i.videoId)).toEqual(Array(6).fill("m0"));
+  });
+
+  it("lists the commercials of the break in what comes next", () => {
+    const schedule = createLiveSchedule(build(), { breaks: RULE });
+    const onAir = schedule.whatsOn("big", START + 3 * 60_000, 3)!; // 4th clip is on air
+
+    expect(onAir.upNext.map((s) => s.kind)).toEqual(["commercial", "commercial", "clip"]);
+  });
+
+  it("keeps commercials out of the channel's clip list and counts them per cycle", () => {
+    const schedule = createLiveSchedule(build(), { breaks: RULE });
+
+    expect(schedule.scheduledIds("big")).toEqual(clips);
+    expect(schedule.itemsPerCycle("big")).toBe(16);
+  });
+
+  it("is exactly the old grid when the catalog has no commercials", () => {
+    const without = parseCatalog({
+      schemaVersion: 1,
+      channels: [{ id: "big", name: "Big", icon: "", order: 0, videoIds: clips }],
+      videos: Object.fromEntries(clips.map((id) => [id, { durationSec: 60 }])),
+    });
+    const plain = createLiveSchedule(without, { breaks: RULE });
+    const reference = createLiveSchedule(without);
+
+    for (let t = START; t < START + 2 * 600_000; t += 17_000) {
+      expect(plain.whatsOn("big", t)).toEqual(reference.whatsOn("big", t));
+      expect(plain.whatsOn("big", t)!.kind).toBe("clip");
+    }
+  });
+
+  it("plays a break by default when the catalog has commercials", () => {
+    const schedule = createLiveSchedule(build());
+
+    const kinds = new Set<string>();
+    for (let t = START; t < START + 720_000; t += 10_000) kinds.add(schedule.whatsOn("big", t)!.kind);
+    expect(kinds).toEqual(new Set(["clip", "commercial"]));
   });
 });

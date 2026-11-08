@@ -113,6 +113,8 @@ Para um emulador Android TV já aberto, use `android/scripts/install-tv.sh --dev
 5. Alterne entre **ao vivo** e **fila** com a linha "Modo" do guia ou com a tecla **Menu** (ou a **amarela**), que mostra o aviso "Ao vivo" ou "Fila".
 6. Aperte **Voltar** para fechar o que estiver aberto. Sem nada aberto, ele pergunta se você quer sair.
 
+**Intervalos comerciais:** entre os clipes tocam intervalos com comerciais brasileiros (a cada ~4 clipes, 2 comerciais). Ao vivo, o intervalo faz parte da grade e todos os aparelhos veem o mesmo instante; na fila, ele vem depois de cada 4 clipes. A tarja não aparece sozinha no comercial, mas o botão **Info** mostra marca, título e ano, e o guia mostra "Intervalo comercial". Pular (na fila) durante um comercial vai direto ao próximo clipe. Não há ajuste para desligar os intervalos.
+
 O app guarda o último canal, os favoritos, o filtro de favoritos e o modo no armazenamento local da WebView/navegador.
 
 ## Guia de controles
@@ -154,6 +156,8 @@ pnpm catalog     # gera o catálogo real (exige YOUTUBE_API_KEY)
 ## Catálogo de canais
 
 `pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site de origem e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git e nunca deve ser commitado nem publicado (a curadoria é do criador do site). O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
+
+**Comerciais:** a lista de comerciais dos intervalos é curada à mão em [`web/curadoria/comerciais-br.json`](web/curadoria/comerciais-br.json) (versionada, ao contrário do snapshot). O `pnpm catalog` lê esse arquivo, valida duração e embed de cada comercial junto com os clipes e grava o que sobrar no campo `commercials` do snapshot; eles não viram canal. Para trocar a lista, edite o JSON (`id`, `brand`, `title`, `year`) e rode `pnpm catalog` de novo. O relatório mostra quantos comerciais ficaram e quantos foram descartados.
 
 **Durações (YouTube Data API):** o comando consulta a duração e o status de embed de cada vídeo na YouTube Data API v3, então precisa de uma chave: `YOUTUBE_API_KEY=... pnpm catalog` (crie a chave no Google Cloud Console com a YouTube Data API v3 ativada). A chave só é lida da variável de ambiente; nunca a coloque no repositório.
 

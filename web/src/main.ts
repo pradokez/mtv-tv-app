@@ -11,7 +11,7 @@ import { mathRandom } from "./lib/random";
 import { FakePlayer, mountFakePlayerView } from "./player/fake-player";
 import type { PlayerAdapter } from "./player/player";
 import { createYouTubePlayer } from "./player/youtube-player";
-import { lowerThirdLines } from "./overlays/lower-third";
+import { commercialLines, lowerThirdLines } from "./overlays/lower-third";
 import { guideRows } from "./overlays/guide";
 import { guideOnAir } from "./overlays/on-air";
 import { createOverlays } from "./overlays/overlays";
@@ -54,10 +54,15 @@ async function main(): Promise<void> {
     const channel = nowPlaying && catalog.channel(nowPlaying.channelId);
     if (nowPlaying && channel) {
       const number = catalog.channels().indexOf(channel) + 1;
-      overlays.showInfo(lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name, number));
+      overlays.showInfo(
+        nowPlaying.kind === "commercial"
+          ? commercialLines(catalog.commercial(nowPlaying.videoId), channel.name, number)
+          : lowerThirdLines(catalog.video(nowPlaying.videoId), channel.name, number),
+      );
     }
   };
-  tuner.onNowPlaying(showLowerThird);
+  // A break starts without the lower third; the Info button still shows it.
+  tuner.onNowPlaying((nowPlaying) => nowPlaying.kind === "clip" && showLowerThird(nowPlaying));
   tuner.onNowPlaying(({ channelId }) => preferences.setLastChannel(channelId));
   const syncZapFilter = () => {
     // Ids of channels that left the catalog must not count, or zapping would find nowhere to go.

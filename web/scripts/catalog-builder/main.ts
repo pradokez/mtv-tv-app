@@ -7,16 +7,20 @@
  * run by hand. It fetches the three static files below and nothing else (no
  * counter or telemetry endpoints).
  *
+ * The commercials of the breaks between clips come from the hand-curated list
+ * `curadoria/comerciais-br.json` (committed, unlike the snapshot).
+ *
  * Durations and embed status come from the YouTube Data API, with the key in
  * the `YOUTUBE_API_KEY` environment variable. Answers are cached in
  * `.cache/youtube-meta.json` (git-ignored), so a run cut short by the quota
  * resumes where it stopped.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build, type SearchEntry } from "./build.ts";
 import { parseChannelConfig } from "./channel-config.ts";
+import { parseCuratedCommercials } from "./commercials.ts";
 import { formatReport } from "./report.ts";
 import { createYouTubeMetaLookup } from "./youtube-meta.ts";
 
@@ -27,6 +31,7 @@ const SOURCES = {
   searchIndex: `${SITE}/search-index.json`,
 };
 const OUTPUT = fileURLToPath(new URL("../../public/catalog.json", import.meta.url));
+const CURATED_COMMERCIALS = fileURLToPath(new URL("../../curadoria/comerciais-br.json", import.meta.url));
 const META_CACHE = fileURLToPath(new URL("../../.cache/youtube-meta.json", import.meta.url));
 
 async function download(url: string): Promise<string> {
@@ -60,6 +65,8 @@ async function main() {
     );
   }
 
+  const commercials = parseCuratedCommercials(readFileSync(CURATED_COMMERCIALS, "utf8"));
+
   console.log("Baixando playlists, configuração de canais e índice de busca…");
   const [playlists, channelConfig, searchIndex] = await Promise.all([
     download(SOURCES.playlists).then(parsePlaylists),
@@ -80,6 +87,7 @@ async function main() {
       },
     }),
     generatedAt: new Date().toISOString(),
+    commercials,
   });
 
   const json = JSON.stringify(catalog);
