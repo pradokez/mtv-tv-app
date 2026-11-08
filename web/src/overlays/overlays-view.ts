@@ -11,6 +11,8 @@ export interface OverlaysViewDeps {
 
 /** Rows around the focus that get their "now on air" filled in: the visible ones, with some margin. */
 const ON_AIR_WINDOW = 8;
+/** Waits a bit past the end of a clip, so the refresh surely sees the next one on air. */
+const REFRESH_SLACK_MS = 50;
 
 /** Renders the overlay state into the lower third, the guide and the exit confirmation. */
 export function mountOverlaysView(root: HTMLElement, deps?: OverlaysViewDeps): (state: OverlayState) => void {
@@ -107,11 +109,10 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
     refreshTimer = undefined;
   };
 
-  const refreshOnAir = () => {
-    stopRefresh();
-    if (!deps?.onAir || !shownRows) return;
-    const now = deps.clock.now();
+  /** Fills the "now on air" of the rows around the focus; returns when the first of those clips ends. */
+  const fillOnAir = (now: number): number => {
     let nextEnd = Infinity;
+    if (!deps?.onAir || !shownRows) return nextEnd;
     const from = Math.max(0, focusIndex - ON_AIR_WINDOW);
     const to = Math.min(shownRows.length, focusIndex + ON_AIR_WINDOW + 1);
     for (let i = from; i < to; i++) {
@@ -122,7 +123,19 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
       target.replaceChildren(...onAirLines(info));
       if (info) nextEnd = Math.min(nextEnd, info.endsAtMs);
     }
-    if (nextEnd < Infinity) refreshTimer = deps.clock.setTimeout(refreshOnAir, Math.max(nextEnd - now, 0) + 50);
+    return nextEnd;
+  };
+
+  const refreshOnAir = () => {
+    stopRefresh();
+    const now = deps?.clock.now() ?? 0;
+    const nextEnd = fillOnAir(now);
+    // Scroll only after filling: the "now on air" lines change the height of
+    // the rows above the focus, which would otherwise push it out of view.
+    focused?.scrollIntoView({ block: "nearest" });
+    if (deps && nextEnd < Infinity) {
+      refreshTimer = deps.clock.setTimeout(refreshOnAir, Math.max(nextEnd - now, 0) + REFRESH_SLACK_MS);
+    }
   };
 
   return {
@@ -147,7 +160,6 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
         focused?.classList.remove("focused");
         focused = items[focus];
         focused?.classList.add("focused");
-        focused?.scrollIntoView({ block: "nearest" });
         focusIndex = focus;
         stale = true;
       }
