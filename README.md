@@ -79,14 +79,13 @@ Veja [Catálogo de canais](#catálogo-de-canais) para o que o comando faz e quan
 
 Testado em uma TCL C06 (Android 11).
 
-1. **Gere o build web e copie para a casca Android.** O build deve chegar em `android/app/src/main/assets/web/`:
+1. Para instalar com canais reais, gere o catálogo antes:
 
    ```bash
-   cd web && pnpm build
-   rm -rf ../android/app/src/main/assets/web && mkdir -p ../android/app/src/main/assets/web
-   cp -R dist/. ../android/app/src/main/assets/web/
+   cd web && YOUTUBE_API_KEY=sua-chave pnpm catalog
    ```
 
+   O `web/public/catalog.json` fica local e é ignorado pelo git. Sem ele, o script avisa que usará o catálogo de exemplo de 2 canais.
 2. **Libere o modo desenvolvedor na TV:** em **Configurações → Sistema → Sobre**, aperte OK sete vezes em **Build do Android TV**.
 3. Em **Configurações → Sistema → Opções do desenvolvedor**, ligue **Depuração USB** e **Depuração por rede/ADB sobre rede** (o nome varia entre versões).
 4. Veja o IP da TV em **Configurações → Rede e Internet**. Mac e TV precisam estar na mesma rede.
@@ -96,13 +95,13 @@ Testado em uma TCL C06 (Android 11).
    android/scripts/install-tv.sh 192.168.0.50      # IP da TV; porta padrão 5555
    ```
 
-   O script faz `adb connect`, compila (`./gradlew assembleDebug`), instala com `adb install -r` e abre o app.
+   O script compila o app web com `pnpm build`, empacota o catálogo presente, compila o APK (`./gradlew assembleDebug`), instala com `adb install -r` e abre o app. Os assets temporários são restaurados ao terminar, inclusive se o build falhar.
 6. Na primeira conexão a TV pergunta "Permitir depuração?". Escolha **Sempre permitir** e rode o script de novo se precisar.
 7. O app aparece na linha de apps da tela inicial, com banner e ícone próprios.
 
 Para um emulador Android TV já aberto, use `android/scripts/install-tv.sh --device emulator-5554` (e, se a instalação travar, `adb shell settings put global package_verifier_enable 0`).
 
-> O `catalog.json` real não vai para o git. Se ele existir em `web/public/` na hora do `pnpm build`, é empacotado no APK; sem ele, o APK leva o catálogo de exemplo.
+> O snapshot real continua fora do repositório e de qualquer publicação. Ele só é empacotado no APK local para a TV; o script restaura o placeholder versionado depois da compilação.
 
 ## Como usar
 
