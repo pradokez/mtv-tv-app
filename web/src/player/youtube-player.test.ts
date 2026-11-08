@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Clock } from "../lib/clock";
 import { createYouTubePlayer } from "./youtube-player";
 
@@ -76,7 +76,6 @@ async function setup(autoplayAllowed?: boolean) {
 }
 
 describe("YouTube player: autoplay fallback", () => {
-  beforeEach(() => vi.unstubAllGlobals());
   afterEach(() => vi.unstubAllGlobals());
 
   it("mutes when the browser leaves the first clip unstarted", async () => {
