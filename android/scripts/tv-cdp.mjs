@@ -9,9 +9,8 @@
 //
 // Também funciona como biblioteca: `import { connectTv } from "./tv-cdp.mjs"`.
 //
-// Com a opção `inject` (página recarregada), o relógio e o catálogo são alterados só em memória:
-//   clockOffsetMs: soma ao Date.now() do app, nunca ao do iframe do YouTube.
-//   catalogPatch:  corpo de função que recebe o catálogo (`c`) e o devolve alterado.
+// `shiftClock(ms)` recarrega a página somando `ms` ao Date.now() do app, nunca ao do iframe do YouTube.
+// A alteração fica só em memória e vale até a conexão fechar e o app reiniciar.
 import { execFileSync } from "node:child_process";
 
 const ADB = process.env.ADB ?? "adb";
@@ -84,7 +83,6 @@ export async function connectTv(serial) {
   let nextId = 1;
   const waiting = new Map();
   const contexts = new Map();
-  const listeners = [];
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
     if (msg.id) {
@@ -97,7 +95,6 @@ export async function connectTv(serial) {
     if (msg.method === "Runtime.executionContextCreated") contexts.set(msg.params.context.id, msg.params.context);
     if (msg.method === "Runtime.executionContextDestroyed") contexts.delete(msg.params.executionContextId);
     if (msg.method === "Runtime.executionContextsCleared") contexts.clear();
-    for (const listener of listeners) listener(msg);
   };
   const send = (method, params = {}) => new Promise((resolve, reject) => {
     const id = nextId++;
@@ -120,7 +117,6 @@ export async function connectTv(serial) {
 
   const tv = {
     send,
-    onEvent: (listener) => listeners.push(listener),
     eval: (expression) => evalIn(expression),
     state: () => evalIn(STATE_EXPR),
     /** O que o player do YouTube toca; `null` se ainda não há iframe. */
@@ -142,23 +138,14 @@ export async function connectTv(serial) {
       adb(serial, "pull", file, out);
       adb(serial, "shell", "rm", file);
     },
-    /** Recarrega a página com relógio e/ou catálogo alterados, só em memória. */
-    inject: async ({ clockOffsetMs = 0, catalogPatch } = {}) => {
+    /** Recarrega a página com o relógio do app deslocado, só em memória. */
+    shiftClock: async (ms) => {
       const source = `if (location.hostname === "appassets.androidplatform.net") {
         const realNow = Date.now.bind(Date);
-        Date.now = () => realNow() + ${clockOffsetMs};
-        ${catalogPatch ? `const realFetch = window.fetch.bind(window);
-        window.fetch = async (url, init) => {
-          const response = await realFetch(url, init);
-          if (!String(url).endsWith("catalog.json")) return response;
-          const c = await response.json();
-          const patched = ((c) => { ${catalogPatch} })(c);
-          return new Response(JSON.stringify(patched));
-        };` : ""}
+        Date.now = () => realNow() + ${ms};
       }`;
-      const { identifier } = await send("Page.addScriptToEvaluateOnNewDocument", { source });
+      await send("Page.addScriptToEvaluateOnNewDocument", { source });
       await send("Page.reload");
-      return identifier;
     },
     close: () => ws.close(),
   };
