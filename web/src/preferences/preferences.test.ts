@@ -36,4 +36,39 @@ describe("preferences", () => {
     expect(() => preferences.setLastChannel("90s")).not.toThrow();
     expect(preferences.lastChannel()).toBeUndefined();
   });
+
+  it("persists favorites and toggles them off", () => {
+    const storage = memoryStorage();
+    const preferences = createPreferences(storage);
+
+    expect(preferences.toggleFavorite("90s")).toBe(true);
+    expect(preferences.toggleFavorite("80s")).toBe(true);
+    expect(createPreferences(storage).favorites()).toEqual(["90s", "80s"]);
+    expect(preferences.toggleFavorite("90s")).toBe(false);
+    expect(createPreferences(storage).favorites()).toEqual(["80s"]);
+  });
+
+  it("persists the favorites-only setting, off by default", () => {
+    const storage = memoryStorage();
+    expect(createPreferences(storage).favoritesOnly()).toBe(false);
+
+    createPreferences(storage).setFavoritesOnly(true);
+
+    expect(createPreferences(storage).favoritesOnly()).toBe(true);
+  });
+
+  it("ignores corrupted favorites", () => {
+    const storage = memoryStorage();
+    storage.setItem("mtv-tv.favorites", "{nope");
+
+    expect(createPreferences(storage).favorites()).toEqual([]);
+  });
+
+  it("keeps favorites for the session with a storage that throws", () => {
+    const preferences = createPreferences(brokenStorage);
+
+    expect(preferences.toggleFavorite("90s")).toBe(true);
+    expect(preferences.favorites()).toEqual(["90s"]);
+    expect(preferences.favoritesOnly()).toBe(false);
+  });
 });
