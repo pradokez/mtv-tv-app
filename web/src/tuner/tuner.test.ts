@@ -447,4 +447,61 @@ describe("connection", () => {
 
     expect(loadedIds(player)).toEqual(["x"]);
   });
+
+  describe("favorites filter", () => {
+    const tuneWith = (filter: string[] | undefined, start: string) => {
+      const ctx = setup();
+      ctx.tuner.tune(start);
+      ctx.tuner.setZapFilter(filter && new Set(filter));
+      return ctx;
+    };
+    const zapTo = (ctx: ReturnType<typeof setup>, direction: "channelUp" | "channelDown") => {
+      ctx.tuner[direction]();
+      ctx.clock.advance(ZAP_DEBOUNCE_MS);
+      return ctx.tuner.current()?.channelId;
+    };
+
+    it("zaps only through the favorites, skipping the others", () => {
+      const ctx = tuneWith(["80s", "00s"], "80s");
+
+      expect(zapTo(ctx, "channelUp")).toBe("00s");
+      expect(zapTo(ctx, "channelUp")).toBe("80s");
+      expect(zapTo(ctx, "channelDown")).toBe("00s");
+    });
+
+    it("zaps from a channel that is not a favorite to the nearest favorite", () => {
+      const ctx = tuneWith(["80s", "00s"], "90s");
+
+      expect(zapTo(ctx, "channelUp")).toBe("00s");
+      const other = tuneWith(["80s", "00s"], "90s");
+      expect(zapTo(other, "channelDown")).toBe("80s");
+    });
+
+    it("stays put with a single favorite that is already tuned", () => {
+      const ctx = tuneWith(["90s"], "90s");
+
+      expect(zapTo(ctx, "channelUp")).toBe("90s");
+      expect(ctx.player.loads).toHaveLength(1);
+    });
+
+    it("ignores an empty filter", () => {
+      const ctx = tuneWith([], "80s");
+
+      expect(zapTo(ctx, "channelUp")).toBe("90s");
+    });
+
+    it("zaps through everything again once the filter is cleared", () => {
+      const ctx = tuneWith(["80s", "00s"], "80s");
+      ctx.tuner.setZapFilter(undefined);
+
+      expect(zapTo(ctx, "channelUp")).toBe("90s");
+    });
+
+    it("still lets tune() go to any channel", () => {
+      const ctx = tuneWith(["80s"], "80s");
+      ctx.tuner.tune("90s");
+
+      expect(ctx.tuner.current()?.channelId).toBe("90s");
+    });
+  });
 });
