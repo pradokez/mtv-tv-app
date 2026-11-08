@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { parseCatalog } from "../catalog/catalog";
+import type { Clock } from "../lib/clock";
+import { FakePlayer } from "../player/fake-player";
 import { createLiveSchedule } from "../schedule/live-schedule";
+import { createTuner } from "../tuner/tuner";
 import { clipLabel, guideOnAir } from "./on-air";
 
 const catalog = parseCatalog({
@@ -9,12 +12,15 @@ const catalog = parseCatalog({
     { id: "solo", name: "Solo", icon: "", order: 0, videoIds: ["s"] },
     { id: "duo", name: "Duo", icon: "", order: 1, videoIds: ["x", "y"] },
     { id: "bare", name: "Bare", icon: "", order: 2, videoIds: ["nodur"] },
+    { id: "anon", name: "Anon", icon: "", order: 3, videoIds: ["u", "v"] },
   ],
   videos: {
     s: { durationSec: 100, artist: "Nirvana", song: "Lithium" },
     x: { durationSec: 10, title: "Titulo X" },
     y: { durationSec: 20, artist: "Artist Y", song: "Song Y" },
     nodur: {},
+    u: { durationSec: 30 },
+    v: { durationSec: 40 },
   },
 });
 const schedule = createLiveSchedule(catalog);
@@ -59,5 +65,26 @@ describe("guideOnAir", () => {
   it("is undefined for channels without a grid", () => {
     expect(guideOnAir(catalog, schedule, "bare", 0)).toBeUndefined();
     expect(guideOnAir(catalog, schedule, "nope", 0)).toBeUndefined();
+  });
+
+  it("still knows the clip and its end when the catalog has no labels for it", () => {
+    const info = guideOnAir(catalog, schedule, "anon", 1_700_000_000_000)!;
+
+    expect(info.now).toBeUndefined();
+    expect(info.next).toBeUndefined();
+    expect(["u", "v"]).toContain(info.videoId);
+    expect(info.endsAtMs).toBeGreaterThan(1_700_000_000_000);
+  });
+
+  it("names the clip the tuner plays when the channel is tuned at that instant", () => {
+    const now = 1_700_000_012_345;
+    const clock: Clock = { now: () => now, setTimeout: () => 0 as never, clearTimeout: () => {} };
+    const player = new FakePlayer();
+    const tuner = createTuner({ catalog, player, schedule, clock, random: () => 0.5, mode: "live" });
+    const info = guideOnAir(catalog, schedule, "duo", now)!;
+
+    tuner.tune("duo");
+
+    expect(player.current).toEqual({ videoId: info.videoId, startSec: schedule.whatsOn("duo", now)!.offsetSec });
   });
 });
