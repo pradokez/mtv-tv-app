@@ -30,7 +30,7 @@
 | 1 | ✅ | Controle físico: banner na lista de apps, abre direto. |
 | 2 | ✅ | Canal X = `90s`. Após `force-stop` e reabrir, e após HOME e reabrir, volta em `90s`, tocando. |
 | 3 | ✅ | `pm clear` e abrir: canal `70s` (o primeiro), tocando em ~16 s. |
-| 4 | ⚠️ | Sem elementos do navegador, e o player ocupa a tela. Desvio 1: a interface do YouTube aparece no início de cada clipe. |
+| 4 | ⚠️ | Sem elementos do navegador, e o player ocupa a tela. Desvio 1: a interface do YouTube aparece no início de cada clipe. Alguns clipes também mostram legendas (ver a #35). |
 | 5 | ✅ | Toca sem apertar play. Falhou antes da correção; depois dela, 10 trocas seguidas sem mudo nem aviso. |
 | 6 | ✅ | Fila: posicionei o vídeo 4 s antes do fim, e o próximo começou sozinho, com tarja. |
 | 7 | ⏳ | `FLAG_KEEP_SCREEN_ON` está no código, mas a espera além do descanso de 5 min não foi feita. |
@@ -120,7 +120,8 @@ Capturas da TV, no PR. Nada foi capturado no Mac.
 | Tarja com artista e música, sobre vídeo claro | ✅ |
 | Tarja só com título, sem metadado, título longo, sobre vídeo escuro | ⏳ |
 | Confirmação de saída | ✅ |
-| Guia: normal, com favoritos, sem favoritos (aviso), "agora no ar" | ✅ |
+| Guia: sem favoritos, com favoritos, "agora no ar" | ✅ |
+| Avisos "Ao vivo não se pula" e "Sem favoritos" | ⏳ Confirmados pelo DOM (histórias 14 e 24), sem captura válida |
 | Sem internet e canal sem vídeos | ⏳ |
 | Área segura, legibilidade a 3 m, foco | ✅ Avaliação da dona do projeto |
 | Saltos de layout ao abrir e fechar | ⏳ Não medido |
@@ -136,6 +137,6 @@ Capturas da TV, no PR. Nada foi capturado no Mac.
 
 ## Observações para repetir o teste
 
-- Gravações no localStorage logo antes de `force-stop` se perdem. Com 3 s de espera, persistiram. Isso também explica resultados do log com `modo: queue`.
+- Gravações no localStorage logo antes de `force-stop` se perdem. Com 3 s de espera, persistiram.
 - `screencap` falha às vezes nessa TV, e o script tenta de novo.
 - Com a TV em descanso de tela (`DreamActivity`), a lista de páginas do CDP vem vazia: acorde a TV antes.
