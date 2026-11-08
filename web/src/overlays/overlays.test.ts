@@ -216,6 +216,18 @@ describe("overlays", () => {
       expect(overlays.state().guide.focus).toBe(2);
     });
 
+    it("keeps the focus on the setting and the tuned channel when a setting changes the rows", () => {
+      const { overlays } = setup();
+      overlays.openGuide(rows, "a");
+      overlays.guideMove(-1);
+      overlays.guideMove(-1);
+
+      overlays.setGuideRows(guideRows(channels, [], false, "queue"));
+
+      expect(focusedId(overlays)).toBe("mode");
+      expect(overlays.state().guide.tunedId).toBe("a");
+    });
+
     it("closes with Back", () => {
       const { overlays } = setup();
       overlays.openGuide(rows, "a");
