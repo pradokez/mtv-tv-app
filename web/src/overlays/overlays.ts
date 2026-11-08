@@ -3,6 +3,9 @@ import type { Clock, TimerId } from "../lib/clock";
 /** How long the lower third stays on screen before hiding by itself. */
 export const INFO_DURATION_MS = 6000;
 
+/** How long a notice (mode switch, blocked skip) stays on screen. */
+export const NOTICE_DURATION_MS = 2000;
+
 export type ExitChoice = "continue" | "exit";
 
 export interface OverlayState {
@@ -11,6 +14,8 @@ export interface OverlayState {
   lines: readonly string[];
   /** Highlighted option while `overlay` is `exitConfirm`. */
   exitChoice: ExitChoice;
+  /** Brief message shown over any overlay, if any. */
+  notice?: string;
 }
 
 export interface OverlaysDeps {
@@ -28,6 +33,8 @@ export interface Overlays {
   showInfo(lines: readonly string[]): void;
   /** Hides the lower third if it is showing; any other overlay stays open. */
   hideInfo(): void;
+  /** Shows a brief, discreet message that hides by itself. */
+  showNotice(text: string): void;
   /** Closes the open overlay; with none open, asks to exit. */
   back(): void;
   exitMove(): void;
@@ -37,6 +44,7 @@ export interface Overlays {
 export function createOverlays({ clock, onExit, onChange }: OverlaysDeps): Overlays {
   let state: OverlayState = { overlay: "none", lines: [], exitChoice: "continue" };
   let hideTimer: TimerId | undefined;
+  let noticeTimer: TimerId | undefined;
 
   const clearTimer = () => {
     if (hideTimer !== undefined) clock.clearTimeout(hideTimer);
@@ -60,6 +68,14 @@ export function createOverlays({ clock, onExit, onChange }: OverlaysDeps): Overl
       clearTimer();
       set({ overlay: "info", lines });
       hideTimer = clock.setTimeout(close, INFO_DURATION_MS);
+    },
+    showNotice(text) {
+      if (noticeTimer !== undefined) clock.clearTimeout(noticeTimer);
+      set({ notice: text });
+      noticeTimer = clock.setTimeout(() => {
+        noticeTimer = undefined;
+        set({ notice: undefined });
+      }, NOTICE_DURATION_MS);
     },
     hideInfo() {
       if (state.overlay === "info") close();
