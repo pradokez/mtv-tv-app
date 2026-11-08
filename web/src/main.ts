@@ -44,8 +44,7 @@ async function main(): Promise<void> {
     onExit: () => window.MtvTv?.exitApp(),
     onChange: mountOverlaysView(document.getElementById("overlays")!, {
       clock: systemClock,
-      // The queue has no grid, so the guide only lists channels there.
-      onAir: (channelId, nowMs) => (preferences.mode() === "live" ? guideOnAir(catalog, schedule, channelId, nowMs) : undefined),
+      onAir: (channelId, nowMs) => guideOnAir(catalog, schedule, channelId, nowMs),
     }),
   });
   // The lower third would name a clip that is not on screen behind the status message.
