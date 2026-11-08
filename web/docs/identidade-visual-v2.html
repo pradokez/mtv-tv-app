@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTV TV — guia visual v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap">
+<style>
+  body{margin:0;background:#101012;font-family:system-ui,sans-serif;color:#eee}
+  a{color:#ffd400}a:hover{color:#ff2d8a}
+  .intro{padding:40px 44px 8px;max-width:1000px}
+  .intro h1{margin:0 0 8px;font-size:26px}
+  .intro p{margin:4px 0;font-size:13px;line-height:1.5;color:rgba(255,255,255,.65)}
+  .turn{padding:28px 44px;border-top:1px solid rgba(255,255,255,.08)}
+  .thd{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:0 0 16px;font-size:14px;font-weight:600}
+  .sw{display:flex;gap:12px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:6px;font:11px ui-monospace,Menlo,monospace;color:#ccc}
+  .chip i{display:block;width:24px;height:24px;border-radius:4px;border:1px solid rgba(255,255,255,.2)}
+  .opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+  .opt{flex:none;display:flex;flex-direction:column;gap:8px}
+  .olabel{display:flex;align-items:baseline;gap:8px;font:12px/1.3 system-ui,sans-serif;color:rgba(255,255,255,.7);max-width:768px}
+  .oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:#ffd400;color:#0b0710;border-radius:5px}
+  .fit{width:768px;height:432px;overflow:hidden;border-radius:6px;outline:1px solid rgba(255,255,255,.12)}
+  .tv{position:relative;width:960px;height:540px;overflow:hidden;transform:scale(.8);transform-origin:0 0;color:#fff;line-height:1.15;font-family:"Chakra Petch","Helvetica Neue",Arial,sans-serif}
+  .pa{--bg:#0a090c;--raised:#1d1a22;--accent:#cb1c6a;--on:#fff;--hl:#f1f028;--ink:#0a090c;--dim:#c0aac0;--label:#2af0f1;--rule:#2af0f1}
+  .pb{--bg:#0b0813;--raised:#171028;--accent:#7b5cff;--hl:#ff8a1f;--ink:#120a00;--dim:rgba(255,255,255,.74);--label:#b8a6ff}
+  .vd{position:absolute;inset:0;background:repeating-linear-gradient(135deg,#222a35 0 24px,#1a212b 24px 48px)}
+  .lt{position:absolute;left:0;right:0;bottom:0;padding:64px 5% 5%;background:linear-gradient(to top,color-mix(in srgb,var(--bg) 94%,transparent),color-mix(in srgb,var(--bg) 55%,transparent) 55%,transparent)}
+  .lt p{margin:0;max-width:60%}
+  .lt-main{font-size:44px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+  .lt-sub{margin-top:3px!important;font-size:30px;font-weight:500;color:var(--dim)}
+  .lt-ch{display:block;width:fit-content;margin-top:14px!important;padding:3px 18px 3px 14px!important;background:var(--accent);color:var(--on,var(--ink));font-size:22px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+  .pb .lt-ch{color:#fff}
+  .st{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:28px;padding:5%;font-size:30px;font-weight:500;text-align:center;color:var(--dim);background:radial-gradient(ellipse at 50% 40%,var(--raised),var(--bg) 70%)}
+  .st::before{content:"MTV TV";justify-self:center;padding:3px 20px;background:var(--accent);color:var(--on,var(--ink));font-size:44px;font-weight:700;letter-spacing:.16em;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+  .pb .st::before{color:#fff}
+  .gd{position:absolute;left:0;top:0;bottom:0;width:44%;padding:5% 0 5% 5%;box-sizing:border-box;background:linear-gradient(to right,color-mix(in srgb,var(--bg) 96%,transparent),color-mix(in srgb,var(--bg) 90%,transparent) 75%,transparent);display:flex;flex-direction:column;gap:6px}
+  .gh{margin:10px 0 2px;font:600 15px ui-monospace,Menlo,monospace;letter-spacing:.2em;color:var(--label)}
+  .gh:first-child{margin-top:0}
+  .rw{display:flex;align-items:center;gap:16px;height:52px;padding:0 18px;font-size:27px;font-weight:600;color:var(--dim)}
+  .rw.f{background:var(--hl);color:var(--ink);font-weight:700;clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%)}
+  .ic{flex:none;width:36px;height:36px;background:var(--raised);border:1px solid rgba(255,255,255,.22);display:grid;place-items:center;font:600 14px ui-monospace,monospace;color:var(--dim)}
+  .rw.f .ic{background:var(--ink);color:var(--hl);border-color:var(--ink)}
+  .nm{flex:1;min-width:0;white-space:nowrap}
+  .star{font-size:25px;color:var(--hl)}
+  .rw.f .star{color:var(--ink)}
+  /* saída */
+  .xv{position:absolute;inset:0;display:grid;place-items:center;background-color:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(6px);background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:40px 40px}
+  .xc{width:600px;padding:2px;background:var(--rule,var(--accent));clip-path:polygon(0 0,calc(100% - 28px) 0,100% 28px,100% 100%,28px 100%,0 calc(100% - 28px))}
+  .xi{display:flex;flex-direction:column;gap:22px;padding:30px 40px 26px;background:var(--bg);clip-path:polygon(0 0,calc(100% - 27px) 0,100% 27px,100% 100%,27px 100%,0 calc(100% - 27px))}
+  .xk{font:600 14px ui-monospace,Menlo,monospace;letter-spacing:.22em;color:var(--label)}
+  .xq{margin:0;font-size:46px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+  .xs{margin:0;font-size:22px;font-weight:500;color:var(--dim)}
+  .xr{display:flex;gap:18px}
+  .xb{flex:1;padding:2px;background:rgba(255,255,255,.35);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+  .xb span{display:flex;align-items:center;justify-content:center;gap:10px;height:64px;background:var(--raised);font-size:30px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,13px 100%,0 calc(100% - 13px))}
+  .xb.on{background:var(--hl)}
+  .xb.on span{background:var(--hl);color:var(--ink);font-weight:700}
+  .xh{display:flex;gap:20px;font:500 13px ui-monospace,Menlo,monospace;color:rgba(255,255,255,.55)}
+  .xh b{display:inline-block;margin-right:6px;padding:1px 6px;border:1px solid rgba(255,255,255,.4);color:#fff;font-weight:600}
+  .xbd{position:absolute;left:0;right:0;top:50%;height:200px;margin-top:-100px;display:flex;align-items:center;justify-content:space-between;gap:40px;padding:0 5%;background:color-mix(in srgb,var(--bg) 94%,transparent);border-top:3px solid var(--rule,var(--accent));border-bottom:3px solid var(--rule,var(--accent))}
+  .xbd .xq{font-size:54px}
+  .xbd .xr{width:440px}
+  .note{font:12px/1.5 system-ui,sans-serif;color:rgba(255,255,255,.55);max-width:768px;margin:20px 0 0}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>MTV TV — guia visual v2</h1>
+  <p>Segunda rodada: fonte mais techno (Chakra Petch, com cantos chanfrados nos blocos), duas paletas novas que fogem do magenta + amarelo e o diálogo de saída redesenhado. Frames 960×540 (1080p a 2×) mostrados a 80%. Vídeo e nomes são placeholders; o selo “MTV TV” é só texto estilizado.</p>
+</div>
+
+<section class="turn" id="A">
+  <div class="thd"><span class="oid">A</span>Paleta MTV (escolhida): carmim, amarelo, ciano e lilás
+    <div class="sw"><div class="chip"><i style="background:#0a090c"></i>bg #0a090c</div><div class="chip"><i style="background:#1d1a22"></i>raised #1d1a22</div><div class="chip"><i style="background:#cb1c6a"></i>accent #cb1c6a</div><div class="chip"><i style="background:#f1f028"></i>highlight #f1f028</div><div class="chip"><i style="background:#2af0f1"></i>cyan #2af0f1</div><div class="chip"><i style="background:#c0aac0"></i>dim #c0aac0</div></div></div>
+  <div class="opts">
+    <div class="opt" id="A1"><div class="olabel"><span class="oid">A1</span>Tarja</div>
+      <div class="fit"><div class="tv pa"><div class="vd"></div><div class="lt"><p class="lt-main">Artista de Exemplo</p><p class="lt-sub">Música de Exemplo</p><p class="lt-ch">Anos 80</p></div></div></div></div>
+    <div class="opt" id="A2"><div class="olabel"><span class="oid">A2</span>Guia com foco</div>
+      <div class="fit"><div class="tv pa"><div class="vd"></div><div class="gd">
+        <div class="gh">// FAVORITOS</div>
+        <div class="rw f"><span class="ic">80</span><span class="nm">Anos 80</span><span class="star">★</span></div>
+        <div class="rw"><span class="ic">RK</span><span class="nm">Rock</span><span class="star">★</span></div>
+        <div class="gh">// TODOS OS CANAIS</div>
+        <div class="rw"><span class="ic">70</span><span class="nm">Anos 70</span></div>
+        <div class="rw"><span class="ic">90</span><span class="nm">Anos 90</span></div>
+        <div class="rw"><span class="ic">HH</span><span class="nm">Hip Hop</span></div>
+      </div></div></div></div>
+    <div class="opt" id="A3"><div class="olabel"><span class="oid">A3</span>Status / erro</div>
+      <div class="fit"><div class="tv pa"><div class="st"><span>Sem internet. Vamos tocar de novo assim que a conexão voltar.</span></div></div></div></div>
+    <div class="opt" id="A4"><div class="olabel"><span class="oid">A4</span>Saída — cartão central (foco em Continuar)</div>
+      <div class="fit"><div class="tv pa"><div class="vd"></div><div class="xv"><div class="xc"><div class="xi">
+        <div class="xk">// ENCERRAR SESSÃO</div>
+        <p class="xq">Sair do MTV TV?</p>
+        <p class="xs">Tocando agora · Anos 80</p>
+        <div class="xr"><div class="xb"><span>Sair</span></div><div class="xb on"><span>▶ Continuar</span></div></div>
+        <div class="xh"><span><b>◀ ▶</b>escolher</span><span><b>OK</b>confirmar</span><span><b>VOLTAR</b>continuar</span></div>
+      </div></div></div></div></div></div>
+    <div class="opt" id="A5"><div class="olabel"><span class="oid">A5</span>Saída — faixa de lado a lado (foco em Sair)</div>
+      <div class="fit"><div class="tv pa"><div class="vd"></div><div class="xbd">
+        <div><div class="xk" style="margin-bottom:10px">// ENCERRAR SESSÃO</div><p class="xq">Sair do MTV TV?</p></div>
+        <div class="xr"><div class="xb on"><span>▶ Sair</span></div><div class="xb"><span>Continuar</span></div></div>
+      </div></div></div></div>
+  </div>
+</section>
+
+<section class="turn" id="B">
+  <div class="thd"><span class="oid">B</span>Violeta UV + laranja (descartada)
+    <div class="sw"><div class="chip"><i style="background:#0b0813"></i>bg #0b0813</div><div class="chip"><i style="background:#171028"></i>raised #171028</div><div class="chip"><i style="background:#7b5cff"></i>accent #7b5cff</div><div class="chip"><i style="background:#ff8a1f"></i>highlight #ff8a1f</div></div></div>
+  <div class="opts">
+    <div class="opt" id="B1"><div class="olabel"><span class="oid">B1</span>Tarja</div>
+      <div class="fit"><div class="tv pb"><div class="vd"></div><div class="lt"><p class="lt-main">Artista de Exemplo</p><p class="lt-sub">Música de Exemplo</p><p class="lt-ch">Anos 80</p></div></div></div></div>
+    <div class="opt" id="B2"><div class="olabel"><span class="oid">B2</span>Guia com foco</div>
+      <div class="fit"><div class="tv pb"><div class="vd"></div><div class="gd">
+        <div class="gh">// FAVORITOS</div>
+        <div class="rw f"><span class="ic">80</span><span class="nm">Anos 80</span><span class="star">★</span></div>
+        <div class="rw"><span class="ic">RK</span><span class="nm">Rock</span><span class="star">★</span></div>
+        <div class="gh">// TODOS OS CANAIS</div>
+        <div class="rw"><span class="ic">70</span><span class="nm">Anos 70</span></div>
+        <div class="rw"><span class="ic">90</span><span class="nm">Anos 90</span></div>
+        <div class="rw"><span class="ic">HH</span><span class="nm">Hip Hop</span></div>
+      </div></div></div></div>
+    <div class="opt" id="B3"><div class="olabel"><span class="oid">B3</span>Status / erro</div>
+      <div class="fit"><div class="tv pb"><div class="st"><span>Sem internet. Vamos tocar de novo assim que a conexão voltar.</span></div></div></div></div>
+    <div class="opt" id="B4"><div class="olabel"><span class="oid">B4</span>Saída — cartão central (foco em Continuar)</div>
+      <div class="fit"><div class="tv pb"><div class="vd"></div><div class="xv"><div class="xc"><div class="xi">
+        <div class="xk">// ENCERRAR SESSÃO</div>
+        <p class="xq">Sair do MTV TV?</p>
+        <p class="xs">Tocando agora · Anos 80</p>
+        <div class="xr"><div class="xb"><span>Sair</span></div><div class="xb on"><span>▶ Continuar</span></div></div>
+        <div class="xh"><span><b>◀ ▶</b>escolher</span><span><b>OK</b>confirmar</span><span><b>VOLTAR</b>continuar</span></div>
+      </div></div></div></div></div></div>
+  </div>
+  <p class="note">Na B, o texto sobre o violeta (etiqueta do canal e selo) é branco; sobre laranja, ciano e limão é escuro. A fonte precisaria ser embutida no APK (Chakra Petch é livre, licença OFL), porque o app não carrega nada da rede além do player. Nesta página ela vem do Google Fonts.</p>
+</section>
+
+<section class="turn" id="C">
+  <div class="thd"><span class="oid">C</span>Ícone do app na home da TV (paleta MTV)</div>
+  <style>
+    .home{display:flex;gap:28px;align-items:center;padding:56px 48px;background:linear-gradient(#0a0f1a,#05080f);width:max-content;border-radius:6px;outline:1px solid rgba(255,255,255,.12)}
+    .bn{position:relative;flex:none;width:480px;height:270px;display:grid;place-items:center;overflow:hidden;background-color:#0a090c;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:30px 30px;font-family:"Chakra Petch",Arial,sans-serif}
+    .bn .plq{display:block;padding:14px 38px;background:#cb1c6a;color:#fff;font-size:66px;font-weight:700;letter-spacing:.16em;line-height:1;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+    .bn .bar{position:absolute;left:50%;bottom:62px;width:150px;height:8px;margin-left:-75px;background:#f1f028;transform:translateX(98px);}
+    .bn.focus{outline:6px solid #f1f028;outline-offset:0;transform:scale(1.08);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+    .bn.other{background:repeating-linear-gradient(135deg,#1c222d 0 18px,#161b24 18px 36px);opacity:.7}
+    .bn.other span{font:11px ui-monospace,Menlo,monospace;color:rgba(255,255,255,.4)}
+    .masks{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+    .ic108{position:relative;width:216px;height:216px;background:#0a090c;overflow:hidden;display:grid;place-items:center}
+    .ic108 .plq2{display:grid;place-items:center;width:92px;height:92px;background:#cb1c6a;color:#fff;font:700 46px/1 "Chakra Petch",Arial,sans-serif;letter-spacing:.04em;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+    .ic108 .bar2{position:absolute;left:62px;top:150px;width:48px;height:6px;background:#f1f028;transform:translateX(44px)}
+    .m-circle{border-radius:50%}.m-squircle{border-radius:28%}.m-square{border-radius:6px}
+    .guide-safe{outline:2px dashed rgba(255,255,255,.35);outline-offset:-20px;border-radius:50%}
+  </style>
+  <div class="opts">
+    <div class="opt" id="C1"><div class="olabel"><span class="oid">C1</span>Banner na fileira de apps da Android TV (320×180 dp; exibido a 1,5×). O nosso, à esquerda, com o foco do launcher.</div>
+      <div class="home">
+        <div class="bn focus"><span class="plq">MTV TV</span><span class="bar"></span></div>
+        <div class="bn other" style="margin-left:24px"><span>outro app</span></div>
+        <div class="bn other"><span>outro app</span></div>
+      </div></div>
+    <div class="opt" id="C2"><div class="olabel"><span class="oid">C2</span>Ícone adaptativo (108 dp, exibido a 2×) em três máscaras. O pontilhado é a zona segura de 66 dp.</div>
+      <div class="masks">
+        <div class="ic108 m-circle guide-safe"><span class="plq2">TV</span><span class="bar2"></span></div>
+        <div class="ic108 m-squircle"><span class="plq2">TV</span><span class="bar2"></span></div>
+        <div class="ic108 m-square"><span class="plq2">TV</span><span class="bar2"></span></div>
+      </div></div>
+  </div>
+  <p class="note">Plano de implementação (ainda não aplicado ao Android):<br>
+    1. <b>Banner</b> (<code>drawable/banner.xml</code>): fundo <code>#0a090c</code> com grade fina, placa ciano chanfrada com “MTV TV” em <code>#fff</code> e barra lima. O Android não usa fontes em vetor, então o texto vira contorno (path) a partir do Chakra Petch Bold. Não copia o logotipo da MTV.<br>
+    2. <b>Ícone</b> (<code>ic_launcher_foreground.xml</code> / <code>_background.xml</code>): placa chanfrada com “TV” e barra lima, dentro da zona segura de 66 dp; fundo <code>#0a090c</code>. Considerar também <code>monochrome</code> para ícone temático.<br>
+    3. <b>Validação:</b> instalar o APK na TCL e conferir o banner na home, com e sem foco, a 3 m. Texto legível e nada colado nas bordas (o launcher corta cantos em alguns modelos).<br>
+    4. <b>Decisão pendente:</b> o banner mostra só “MTV TV”, sem subtítulo nem arte de clipe. Se quiser algo mais vivo (ex.: faixa lima diagonal), diga antes de eu converter para vetor.</p>
+</section>
+
+</body>
+</html>
