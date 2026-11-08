@@ -13,6 +13,11 @@ export interface CatalogSnapshotV1 {
   channels: ChannelSnapshot[];
   /** Video metadata keyed by YouTube video id. */
   videos: Record<string, VideoSnapshot>;
+  /**
+   * Hand-curated commercials played in the breaks between clips. They are not
+   * channels and not in `videos`. Optional: a snapshot without them has no breaks.
+   */
+  commercials?: CommercialSnapshot[];
 }
 
 export interface ChannelSnapshot {
@@ -32,4 +37,15 @@ export interface VideoSnapshot {
   song?: string;
   /** Original YouTube title, used when artist or song is missing. */
   title?: string;
+}
+
+export interface CommercialSnapshot {
+  /** YouTube video id. */
+  id: string;
+  brand: string;
+  title: string;
+  /** Year it aired, when known. */
+  year: number | null;
+  /** Always present: a commercial without a duration can't be scheduled. */
+  durationSec: number;
 }

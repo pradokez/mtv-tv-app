@@ -74,6 +74,58 @@ describe("parseCatalog", () => {
     expect(catalog.channel("90s")).toBeUndefined();
   });
 
+  describe("commercials", () => {
+    const commercial = (id: string, extra = {}) => ({
+      id,
+      brand: "Parmalat",
+      title: "Mamíferos",
+      year: 1996,
+      durationSec: 30,
+      ...extra,
+    });
+
+    it("has none when the snapshot has no commercials field", () => {
+      const catalog = parseCatalog(snapshot());
+
+      expect(catalog.commercials()).toEqual([]);
+    });
+
+    it("lists commercials in snapshot order and looks them up by id", () => {
+      const catalog = parseCatalog({ ...snapshot(), commercials: [commercial("x"), commercial("y", { year: null })] });
+
+      expect(catalog.commercials().map((c) => c.id)).toEqual(["x", "y"]);
+      expect(catalog.commercial("y")).toEqual(commercial("y", { year: null }));
+      expect(catalog.commercial("nope")).toBeUndefined();
+    });
+
+    it("never turns commercials into channels or videos", () => {
+      const catalog = parseCatalog({ ...snapshot(), commercials: [commercial("x")] });
+
+      expect(catalog.channels().map((c) => c.id)).toEqual(["80s", "90s"]);
+      expect(catalog.video("x")).toBeUndefined();
+    });
+
+    it("keeps only the first of a repeated id", () => {
+      const catalog = parseCatalog({
+        ...snapshot(),
+        commercials: [commercial("x", { title: "primeiro" }), commercial("x", { title: "segundo" })],
+      });
+
+      expect(catalog.commercials().map((c) => c.title)).toEqual(["primeiro"]);
+    });
+
+    it("rejects commercials that are not a list", () => {
+      expect(() => parseCatalog({ ...snapshot(), commercials: {} })).toThrow(/`commercials` deve ser uma lista/);
+    });
+
+    it("rejects an invalid commercial, naming its position", () => {
+      const bad = [commercial("x"), commercial("y", { durationSec: 0 })];
+
+      expect(() => parseCatalog({ ...snapshot(), commercials: bad })).toThrow(/comercial na posição 1 inválido/);
+      expect(() => parseCatalog({ ...snapshot(), commercials: [{ id: "x" }] })).toThrow(CatalogError);
+    });
+  });
+
   it("accepts the bundled sample catalog", () => {
     const sample = JSON.parse(readFileSync(new URL("../../fixtures/catalog.example.json", import.meta.url), "utf8"));
 

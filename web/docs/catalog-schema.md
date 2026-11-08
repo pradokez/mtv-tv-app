@@ -26,13 +26,24 @@ Os tipos TypeScript em [`src/catalog/schema.ts`](../src/catalog/schema.ts) são 
       "song": "Take On Me",               // opcional
       "title": "a-ha - Take On Me (Official Video)" // opcional: título original do YouTube
     }
-  }
+  },
+  "commercials": [                        // opcional: sem ele, não há intervalos comerciais
+    {
+      "id": "Kw_gPddlzLM",                // ID do YouTube
+      "brand": "Parmalat",
+      "title": "Mamíferos: o elefante é fã",
+      "year": 1996,                       // ou null quando desconhecido
+      "durationSec": 30                   // sempre presente: sem duração não entra na grade
+    }
+  ]
 }
 ```
 
 - Os vídeos ficam num mapa por ID, separados dos canais. Um clipe que aparece em vários canais é descrito uma vez só.
 - Sem `artist` ou `song`, a tarja usa `title`.
 - `durationSec` vem da YouTube Data API (`contentDetails.duration`) e está presente em todo vídeo do snapshot gerado pelo Catalog Builder: vídeos privados, removidos, não embutíveis ou sem duração são descartados antes de gravar. No esquema ele segue opcional, porque o catálogo de exemplo e catálogos antigos podem não tê-lo; a grade ao vivo (fase 2) depende dele.
+
+- Os comerciais (`commercials`) são uma lista à parte: não são canais, não aparecem no guia nem no zapping e não estão em `videos`. Vêm da curadoria própria em [`web/curadoria/comerciais-br.json`](../curadoria/comerciais-br.json), validados pelo Catalog Builder. Campo ausente vale lista vazia; ID repetido mantém a primeira ocorrência; entrada inválida gera `CatalogError`.
 
 ## Geração
 

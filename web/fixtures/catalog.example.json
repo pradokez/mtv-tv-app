@@ -24,5 +24,11 @@
     "hTWKbfoikeg": { "durationSec": 301, "artist": "Nirvana", "song": "Smells Like Teen Spirit", "title": "Nirvana - Smells Like Teen Spirit (Official Music Video)" },
     "HEXWRTEbj1I": { "durationSec": 268, "artist": "Haddaway", "song": "What Is Love", "title": "Haddaway - What Is Love [Official]" },
     "gJLIiF15wjQ": { "durationSec": 173, "artist": "Spice Girls", "song": "Wannabe", "title": "Spice Girls - Wannabe (Official Music Video)" }
-  }
+  },
+  "commercials": [
+    { "id": "Kw_gPddlzLM", "brand": "Parmalat", "title": "Mamíferos: o elefante é fã", "year": 1996, "durationSec": 30 },
+    { "id": "NatlghQ18Mo", "brand": "Guaraná Antarctica", "title": "Guaraná Antarctica", "year": 1991, "durationSec": 30 },
+    { "id": "I5kKz83Z_jE", "brand": "Philco Hitachi", "title": "Passarinho", "year": 1991, "durationSec": 30 },
+    { "id": "HgblBhejI88", "brand": "Brastemp", "title": "Não é assim uma Brastemp", "year": 1991, "durationSec": 30 }
+  ]
 }
