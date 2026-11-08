@@ -5,6 +5,7 @@ App Android TV de uso pessoal que toca canais de videoclipes no estilo da MTV an
 ## Índice
 
 - [O que é](#o-que-é)
+- [Telas](#telas)
 - [Estrutura do repositório](#estrutura-do-repositório)
 - [Instalação](#instalação)
 - [Como usar](#como-usar)
@@ -24,6 +25,16 @@ Uma "TV" de videoclipes: ao abrir, o app já está tocando um canal, sem menus n
 - **Guia de canais** com "agora no ar" e próximo clipe, favoritos e filtro "só favoritos".
 - **Tarja** (lower third) com canal e clipe a cada troca, identidade visual da MTV (paleta e fonte Chakra Petch) e confirmação de saída ao apertar Voltar.
 - **Resiliente:** clipe com erro é pulado, canal sem clipes avisa, e a falta de internet mostra um aviso e retoma sozinha quando a rede volta.
+
+## Telas
+
+Capturas da TV real.
+
+| | |
+| --- | --- |
+| **Tarja** <img src="https://github.com/pradokez/mtv-tv-app/blob/7edd26d49a24c0591be16c22e56d9590daf3f80b/pr-36/tarja-artista-musica.png?raw=true" alt="Tarja com artista, música e canal"> | **Vídeo em tela cheia** <img src="https://github.com/pradokez/mtv-tv-app/blob/7edd26d49a24c0591be16c22e56d9590daf3f80b/pr-36/h4-video-limpo.png?raw=true" alt="Vídeo em tela cheia, sem sobreposições"> |
+| **Guia com "agora no ar"** <img src="https://github.com/pradokez/mtv-tv-app/blob/7edd26d49a24c0591be16c22e56d9590daf3f80b/pr-36/guia-agora-no-ar.png?raw=true" alt="Guia de canais com as colunas Agora no ar e A seguir"> | **Guia com favoritos** <img src="https://github.com/pradokez/mtv-tv-app/blob/7edd26d49a24c0591be16c22e56d9590daf3f80b/pr-36/guia-com-favoritos.png?raw=true" alt="Guia de canais com a seção de favoritos no topo"> |
+| **Guia sem favoritos** <img src="https://github.com/pradokez/mtv-tv-app/blob/7edd26d49a24c0591be16c22e56d9590daf3f80b/pr-36/guia-sem-favoritos.png?raw=true" alt="Guia de canais rolado até o canal em foco"> | **Confirmação de saída** <img src="https://github.com/pradokez/mtv-tv-app/blob/7edd26d49a24c0591be16c22e56d9590daf3f80b/pr-36/confirmacao-saida.png?raw=true" alt="Faixa de confirmação com as opções Sair e Continuar"> |
 
 ## Estrutura do repositório
 
@@ -167,3 +178,4 @@ O app não faz nenhuma requisição ao site original do catálogo: a CSP do `ind
 - [`android/README.md`](android/README.md): casca Android, instalação na TV e no emulador.
 - [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md): formato do `catalog.json`.
 - [`docs/teste-resistencia/README.md`](docs/teste-resistencia/README.md): teste de resistência na TV (memória, standby, qualidade) e como repeti-lo.
+- [`docs/validacao-final/README.md`](docs/validacao-final/README.md): validação das histórias do PRD na TV (parcial; o restante está na issue #35).
