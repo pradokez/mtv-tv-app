@@ -102,6 +102,8 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
   let items: HTMLElement[] = [];
   let focused: HTMLElement | undefined;
   let refreshTimer: TimerId | undefined;
+  /** Row index -> when the clip filled into it ends (`Infinity`: nothing on air to track). */
+  const filledUntil = new Map<number, number>();
   let focusIndex = 0;
 
   const stopRefresh = () => {
@@ -119,9 +121,16 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
       const row = shownRows[i]!;
       const target = items[i]?.querySelector<HTMLElement>(".guide-onair");
       if (row.kind !== "channel" || !target) continue;
-      const info = deps.onAir(row.id, now);
-      target.replaceChildren(...onAirLines(info));
-      if (info) nextEnd = Math.min(nextEnd, info.endsAtMs);
+      // Rows already filled with a clip that is still on air stay as they are:
+      // moving the focus then only fills the row that just entered the window.
+      let endsAt = filledUntil.get(i);
+      if (endsAt === undefined || endsAt <= now) {
+        const info = deps.onAir(row.id, now);
+        target.replaceChildren(...onAirLines(info));
+        endsAt = info?.endsAtMs ?? Infinity;
+        filledUntil.set(i, endsAt);
+      }
+      nextEnd = Math.min(nextEnd, endsAt);
     }
     return nextEnd;
   };
@@ -153,6 +162,7 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
         shownRows = rows;
         items = rows.map(guideItem);
         list.replaceChildren(...items);
+        filledUntil.clear();
         focused = undefined;
         stale = true;
       }
