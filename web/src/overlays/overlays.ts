@@ -1,4 +1,5 @@
 import type { Clock, TimerId } from "../lib/clock";
+import type { GuideRow } from "./guide";
 
 /** How long the lower third stays on screen before hiding by itself. */
 export const INFO_DURATION_MS = 6000;
@@ -14,6 +15,8 @@ export interface OverlayState {
   lines: readonly string[];
   /** Highlighted option while `overlay` is `exitConfirm`. */
   exitChoice: ExitChoice;
+  /** Rows of the guide and the index of the focused one, while `overlay` is `guide`. */
+  guide: { rows: readonly GuideRow[]; focus: number };
   /** Brief message shown over any overlay, if any. */
   notice?: string;
 }
@@ -39,10 +42,18 @@ export interface Overlays {
   back(): void;
   exitMove(): void;
   exitSelect(): void;
+  /** Opens the guide over the video, focused on `focusChannelId` (or the first channel). */
+  openGuide(rows: readonly GuideRow[], focusChannelId: string | undefined): void;
+  /** Moves the guide focus; it stops at both ends. */
+  guideMove(step: 1 | -1): void;
+  /** The focused row while the guide is open. */
+  guideFocused(): GuideRow | undefined;
+  /** Replaces the rows (a favorite changed), keeping the focus on the same row. */
+  setGuideRows(rows: readonly GuideRow[]): void;
 }
 
 export function createOverlays({ clock, onExit, onChange }: OverlaysDeps): Overlays {
-  let state: OverlayState = { overlay: "none", lines: [], exitChoice: "continue" };
+  let state: OverlayState = { overlay: "none", lines: [], exitChoice: "continue", guide: { rows: [], focus: 0 } };
   let hideTimer: TimerId | undefined;
   let noticeTimer: TimerId | undefined;
 
@@ -60,6 +71,8 @@ export function createOverlays({ clock, onExit, onChange }: OverlaysDeps): Overl
     clearTimer();
     set({ overlay: "none" });
   };
+
+  const rowKey = (row: GuideRow | undefined) => (row?.kind === "channel" ? row.id : row?.kind);
 
   return {
     state: () => state,
@@ -95,6 +108,26 @@ export function createOverlays({ clock, onExit, onChange }: OverlaysDeps): Overl
       if (state.overlay !== "exitConfirm") return;
       if (state.exitChoice === "exit") onExit();
       else close();
+    },
+    openGuide(rows, focusChannelId) {
+      if (state.overlay === "exitConfirm" || state.overlay === "guide") return;
+      clearTimer();
+      const at = rows.findIndex((r) => r.kind === "channel" && r.id === focusChannelId);
+      // Row 0 is the favorites-only switch; without a match, start on the first channel.
+      set({ overlay: "guide", guide: { rows, focus: at >= 0 ? at : Math.min(1, rows.length - 1) } });
+    },
+    guideMove(step) {
+      if (state.overlay !== "guide") return;
+      const { rows, focus } = state.guide;
+      const next = Math.max(0, Math.min(rows.length - 1, focus + step));
+      if (next !== focus) set({ guide: { rows, focus: next } });
+    },
+    guideFocused: () => (state.overlay === "guide" ? state.guide.rows[state.guide.focus] : undefined),
+    setGuideRows(rows) {
+      if (state.overlay !== "guide") return;
+      const key = rowKey(state.guide.rows[state.guide.focus]);
+      const at = rows.findIndex((r) => rowKey(r) === key);
+      set({ guide: { rows, focus: at >= 0 ? at : Math.min(state.guide.focus, rows.length - 1) } });
     },
   };
 }

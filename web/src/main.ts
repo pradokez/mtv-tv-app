@@ -9,6 +9,7 @@ import { FakePlayer, mountFakePlayerView } from "./player/fake-player";
 import type { PlayerAdapter } from "./player/player";
 import { createYouTubePlayer } from "./player/youtube-player";
 import { lowerThirdLines } from "./overlays/lower-third";
+import { guideRows } from "./overlays/guide";
 import { createOverlays } from "./overlays/overlays";
 import { mountOverlaysView } from "./overlays/overlays-view";
 import { createStatusOverlay } from "./overlays/status-overlay";
@@ -45,8 +46,29 @@ async function main(): Promise<void> {
   };
   tuner.onNowPlaying(showLowerThird);
   tuner.onNowPlaying(({ channelId }) => preferences.setLastChannel(channelId));
+  const syncZapFilter = () => {
+    // Ids of channels that left the catalog must not count, or zapping would find nowhere to go.
+    const favorites = new Set(preferences.favorites().filter((id) => catalog.channel(id)));
+    tuner.setZapFilter(preferences.favoritesOnly() ? favorites : undefined);
+  };
+  syncZapFilter();
+  const rows = () => guideRows(catalog.channels(), preferences.favorites(), preferences.favoritesOnly());
   const last = preferences.lastChannel();
   tuner.tune(last && catalog.channel(last) ? last : defaultChannel.id);
+
+  /** OK in the guide: tunes the focused channel and closes, or flips the favorites-only switch. */
+  const selectInGuide = (): void => {
+    const row = overlays.guideFocused();
+    if (!row) return;
+    if (row.kind === "filter") {
+      preferences.setFavoritesOnly(!preferences.favoritesOnly());
+      syncZapFilter();
+      overlays.setGuideRows(rows());
+      return;
+    }
+    overlays.back();
+    tuner.tune(row.id);
+  };
 
   const dispatch = (command: Command): void => {
     switch (command.type) {
@@ -71,6 +93,26 @@ async function main(): Promise<void> {
       case "skip":
         tuner.skip();
         break;
+      case "openGuide":
+        overlays.openGuide(rows(), tuner.current()?.channelId);
+        break;
+      case "guideUp":
+        overlays.guideMove(-1);
+        break;
+      case "guideDown":
+        overlays.guideMove(1);
+        break;
+      case "guideSelect":
+        selectInGuide();
+        break;
+      case "guideToggle": {
+        const row = overlays.guideFocused();
+        if (row?.kind !== "channel") break;
+        preferences.toggleFavorite(row.id);
+        syncZapFilter();
+        overlays.setGuideRows(rows());
+        break;
+      }
       case "skipBlocked":
         overlays.showNotice("Ao vivo: não dá para pular");
         break;
@@ -81,7 +123,6 @@ async function main(): Promise<void> {
         overlays.showNotice(next === "live" ? "Ao vivo" : "Fila");
         break;
       }
-      // The guide is wired by a later slice (#9).
       default:
         break;
     }

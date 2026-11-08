@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Clock } from "../lib/clock";
+import { guideRows } from "./guide";
 import { INFO_DURATION_MS, NOTICE_DURATION_MS, createOverlays } from "./overlays";
 
 function fakeClock() {
@@ -144,5 +145,67 @@ describe("overlays", () => {
     overlays.back();
     overlays.showInfo(lines);
     expect(overlays.state().overlay).toBe("exitConfirm");
+  });
+
+  describe("guide", () => {
+    const channels = ["a", "b", "c"].map((id, order) => ({ id, name: id, icon: "", order, videoIds: ["v"] }));
+    const rows = guideRows(channels, [], false);
+    const focusedId = (o: ReturnType<typeof setup>["overlays"]) => {
+      const row = o.guideFocused();
+      return row?.kind === "channel" ? row.id : row?.kind;
+    };
+
+    it("opens focused on the current channel, over the lower third", () => {
+      const { overlays } = setup();
+      overlays.showInfo(lines);
+
+      overlays.openGuide(rows, "b");
+
+      expect(overlays.state().overlay).toBe("guide");
+      expect(focusedId(overlays)).toBe("b");
+    });
+
+    it("does not let the lower third timer or showInfo close it", () => {
+      const { overlays, advance } = setup();
+      overlays.showInfo(lines);
+      overlays.openGuide(rows, "a");
+
+      advance(INFO_DURATION_MS);
+      overlays.showInfo(lines);
+
+      expect(overlays.state().overlay).toBe("guide");
+    });
+
+    it("moves the focus and stops at both ends", () => {
+      const { overlays } = setup();
+      overlays.openGuide(rows, "c");
+
+      overlays.guideMove(1);
+      expect(focusedId(overlays)).toBe("c");
+      overlays.guideMove(-1);
+      overlays.guideMove(-1);
+      overlays.guideMove(-1);
+      overlays.guideMove(-1);
+      expect(focusedId(overlays)).toBe("filter");
+    });
+
+    it("keeps the focus on the same channel when favorites reorder the rows", () => {
+      const { overlays } = setup();
+      overlays.openGuide(rows, "c");
+
+      overlays.setGuideRows(guideRows(channels, ["c"], false));
+
+      expect(focusedId(overlays)).toBe("c");
+      expect(overlays.state().guide.focus).toBe(1);
+    });
+
+    it("closes with Back", () => {
+      const { overlays } = setup();
+      overlays.openGuide(rows, "a");
+
+      overlays.back();
+
+      expect(overlays.state().overlay).toBe("none");
+    });
   });
 });

@@ -46,6 +46,11 @@ export interface Tuner {
   channelUp(): void;
   /** Previous channel in the list (wraps around). Loads once the zapping settles. */
   channelDown(): void;
+  /**
+   * Restricts zapping (not `tune`) to these channels. `undefined` or an empty
+   * set means no restriction. Works even if the current channel is not in it.
+   */
+  setZapFilter(channelIds: ReadonlySet<string> | undefined): void;
   /** Skips the current clip (queue mode; ignored in live mode). Loads once the zapping/skipping settles. */
   skip(): void;
   /** Switches between live and queue mode; the current channel is retuned right away. */
@@ -97,6 +102,7 @@ export function createTuner({
   let timer: TimerId | undefined;
   let status: TunerStatus | undefined;
   let online = true;
+  let zapFilter: ReadonlySet<string> | undefined;
   /** Videos that failed to play this session; never tried again, on any channel. */
   const bad = new Set<string>();
   const started = createEmitter<[nowPlaying: NowPlaying]>();
@@ -198,7 +204,13 @@ export function createTuner({
     if (!channel) return;
     const channels = catalog.channels();
     const from = channels.findIndex((c) => c.id === (pending?.channelId ?? channel!.id));
-    const target = channels[(from + step + channels.length) % channels.length]!;
+    const allowed = (c: ChannelSnapshot) => !zapFilter?.size || zapFilter.has(c.id);
+    let at = from;
+    // Ends: at worst it comes back to the channel we started from.
+    do {
+      at = (at + step + channels.length) % channels.length;
+    } while (!allowed(channels[at]!) && at !== from);
+    const target = channels[at]!;
     if (target.id === channel.id) cancelPending();
     else schedule({ channelId: target.id });
   };
@@ -215,6 +227,9 @@ export function createTuner({
       const next = lookup(channelId);
       cancelPending();
       playNow(next);
+    },
+    setZapFilter(channelIds) {
+      zapFilter = channelIds;
     },
     channelUp: () => zap(1),
     channelDown: () => zap(-1),
