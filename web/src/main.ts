@@ -13,10 +13,12 @@ import type { PlayerAdapter } from "./player/player";
 import { createYouTubePlayer } from "./player/youtube-player";
 import { lowerThirdLines } from "./overlays/lower-third";
 import { guideRows } from "./overlays/guide";
+import { guideOnAir } from "./overlays/on-air";
 import { createOverlays } from "./overlays/overlays";
 import { mountOverlaysView } from "./overlays/overlays-view";
 import { createStatusOverlay } from "./overlays/status-overlay";
 import { createPreferences } from "./preferences/preferences";
+import { createLiveSchedule } from "./schedule/live-schedule";
 import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tuner/tuner";
 
 async function main(): Promise<void> {
@@ -27,9 +29,11 @@ async function main(): Promise<void> {
 
   const player = createPlayer(stage);
   const preferences = createPreferences(window.localStorage);
+  const schedule = createLiveSchedule(catalog);
   const tuner = createTuner({
     catalog,
     player,
+    schedule,
     clock: systemClock,
     random: mathRandom,
     mode: preferences.mode(),
@@ -38,7 +42,11 @@ async function main(): Promise<void> {
   const overlays = createOverlays({
     clock: systemClock,
     onExit: () => window.MtvTv?.exitApp(),
-    onChange: mountOverlaysView(document.getElementById("overlays")!),
+    onChange: mountOverlaysView(document.getElementById("overlays")!, {
+      clock: systemClock,
+      // The queue has no grid, so the guide only lists channels there.
+      onAir: (channelId, nowMs) => (preferences.mode() === "live" ? guideOnAir(catalog, schedule, channelId, nowMs) : undefined),
+    }),
   });
   // The lower third would name a clip that is not on screen behind the status message.
   const status = showStatus(stage, tuner, () => overlays.hideInfo());
