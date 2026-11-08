@@ -29,9 +29,10 @@ export function guideOnAir(
   channelId: string,
   nowMs: number,
 ): GuideOnAir | undefined {
-  // A break has a few commercials, so look far enough ahead to get past it.
-  const onAir = schedule.whatsOn(channelId, nowMs, UP_NEXT_LOOKAHEAD);
+  let onAir = schedule.whatsOn(channelId, nowMs, 1);
   if (!onAir) return undefined;
+  // The next slot is a commercial: look far enough ahead to get past the break.
+  if (onAir.upNext[0]?.kind === "commercial") onAir = schedule.whatsOn(channelId, nowMs, UP_NEXT_LOOKAHEAD)!;
   const upNext = onAir.upNext.find((slot) => slot.kind === "clip");
   return {
     videoId: onAir.videoId,
