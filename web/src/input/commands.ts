@@ -1,3 +1,5 @@
+import type { PlaybackMode } from "../preferences/preferences";
+
 /**
  * What the user asked for, independent of which key produced it. The Input
  * Mapper turns key events into commands; the app dispatches them to the Tuner
@@ -11,6 +13,10 @@ export type Command =
   | { type: "openGuide" }
   /** Skip the current clip (queue mode only). */
   | { type: "skip" }
+  /** Skip was asked in live mode, where the grid can't be skipped. */
+  | { type: "skipBlocked" }
+  /** Switch between live and queue mode. */
+  | { type: "toggleMode" }
   /** Close the open overlay, or ask to exit when none is open. */
   | { type: "back" }
   | { type: "guideUp" }
@@ -28,7 +34,7 @@ export type CommandType = Command["type"];
 /** UI state the mapping depends on. */
 export interface UiState {
   overlay: "none" | "guide" | "info" | "exitConfirm";
-  mode: "queue" | "live";
+  mode: PlaybackMode;
 }
 
 /**
