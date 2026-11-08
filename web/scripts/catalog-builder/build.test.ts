@@ -273,4 +273,80 @@ describe("build", () => {
     expect(catalog.videos[A]).toEqual({ artist: "a-ha", song: "Take On Me" });
     expect(JSON.stringify(catalog)).not.toContain("2016");
   });
+
+  describe("commercials", () => {
+    const X = "Kw_gPddlzLM";
+    const Y = "NatlghQ18Mo";
+    const curated = (id: string) => ({ id, brand: "Marca", title: `Título ${id}`, year: 1990 });
+
+    it("puts curated commercials with their duration in the snapshot, never as a channel", async () => {
+      const { catalog, report } = await build(
+        input({
+          commercials: [curated(X), curated(Y)],
+          metaLookup: lookupOf({ [X]: { durationSec: 30 }, [Y]: { durationSec: 45 } }),
+        }),
+      );
+
+      expect(catalog.commercials).toEqual([
+        { id: X, brand: "Marca", title: `Título ${X}`, year: 1990, durationSec: 30 },
+        { id: Y, brand: "Marca", title: `Título ${Y}`, year: 1990, durationSec: 45 },
+      ]);
+      expect(catalog.channels.map((c) => c.id)).toEqual(["80s", "90s"]);
+      expect(catalog.videos[X]).toBeUndefined();
+      expect(report.commercials.kept).toBe(2);
+    });
+
+    it("asks for the commercials' metadata in the same lookup as the clips", async () => {
+      const asked: string[][] = [];
+      const metaLookup: MetaLookup = async (ids) => {
+        asked.push([...ids]);
+        return { found: new Map(), quotaUnits: 0 };
+      };
+
+      await build(input({ commercials: [curated(X)], metaLookup }));
+
+      expect(asked).toHaveLength(1);
+      expect(asked[0]).toEqual(expect.arrayContaining([A, B, C, X]));
+    });
+
+    it("drops unplayable commercials and those without a known duration, and counts them apart from the clips", async () => {
+      const { catalog, report } = await build(
+        input({
+          commercials: [curated(X), curated(Y), curated("aaaaaaaaaaa")],
+          metaLookup: lookupOf({ [X]: { discard: "não embutível" }, [Y]: { durationSec: 30 } }),
+        }),
+      );
+
+      expect(catalog.commercials?.map((c) => c.id)).toEqual([Y]);
+      expect(report.commercials).toEqual({
+        kept: 1,
+        discarded: { "privado ou removido": 0, "não embutível": 1, "sem duração": 1 },
+      });
+      expect(report.discardedVideos["não embutível"]).toBe(0);
+    });
+
+    it("warns about a commercial longer than 90 seconds (maybe a compilation)", async () => {
+      const { report } = await build(
+        input({ commercials: [curated(X)], metaLookup: lookupOf({ [X]: { durationSec: 600 } }) }),
+      );
+
+      expect(report.warnings).toContainEqual(expect.stringContaining(X));
+    });
+
+    it("still drops the site's own commercials channel", async () => {
+      const { catalog } = await build(
+        input({ playlists: { "80s": [A], commercials: [B] }, commercials: [curated(X)], metaLookup: lookupOf({ [X]: { durationSec: 30 } }) }),
+      );
+
+      expect(catalog.channels.map((c) => c.id)).toEqual(["80s"]);
+      expect(catalog.commercials?.map((c) => c.id)).toEqual([X]);
+    });
+
+    it("omits the field when there is no curated list", async () => {
+      const { catalog, report } = await build(input());
+
+      expect(catalog.commercials).toBeUndefined();
+      expect(report.commercials.kept).toBe(0);
+    });
+  });
 });

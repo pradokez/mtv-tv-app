@@ -2,9 +2,11 @@ import {
   CATALOG_SCHEMA_VERSION,
   type CatalogSnapshotV1,
   type ChannelSnapshot,
+  type CommercialSnapshot,
   type VideoSnapshot,
 } from "../../src/catalog/schema.ts";
 import type { ChannelConfig, ChannelInfo } from "./channel-config.ts";
+import type { CuratedCommercial } from "./commercials.ts";
 
 /** One entry of the site's search index. `y` is the upload year and is never used. */
 export interface SearchEntry {
@@ -45,6 +47,8 @@ export interface BuildInput {
   searchIndex: readonly SearchEntry[];
   metaLookup: MetaLookup;
   generatedAt: string;
+  /** The hand-curated commercials. Without them the snapshot has no breaks. */
+  commercials?: readonly CuratedCommercial[];
 }
 
 export interface DroppedChannel {
@@ -68,6 +72,8 @@ export interface BuildReport {
   metadata: { artistAndSong: number; titleOnly: number; none: number };
   /** YouTube Data API quota spent by this run (cached answers cost nothing). */
   quotaUnits: number;
+  /** The curated commercials: kept in the snapshot, or left out because the TV could not play them. */
+  commercials: { kept: number; discarded: Record<DiscardReason, number> };
   warnings: string[];
 }
 
@@ -75,6 +81,9 @@ export interface BuildResult {
   catalog: CatalogSnapshotV1;
   report: BuildReport;
 }
+
+/** A commercial longer than this is probably a compilation, not a single spot. */
+const LONG_COMMERCIAL_SEC = 90;
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
@@ -97,6 +106,10 @@ export async function build(input: BuildInput): Promise<BuildResult> {
     discardedVideos: Object.fromEntries(DISCARD_REASONS.map((r) => [r, 0])) as Record<DiscardReason, number>,
     metadata: { artistAndSong: 0, titleOnly: 0, none: 0 },
     quotaUnits: 0,
+    commercials: {
+      kept: 0,
+      discarded: Object.fromEntries(DISCARD_REASONS.map((r) => [r, 0])) as Record<DiscardReason, number>,
+    },
     warnings: [],
   };
 
@@ -121,11 +134,14 @@ export async function build(input: BuildInput): Promise<BuildResult> {
     candidates.push({ id, info, videoIds: [...videoIds] });
   }
 
-  const extra = await input.metaLookup([...new Set(candidates.flatMap((c) => c.videoIds))]);
+  const clipIds = new Set(candidates.flatMap((c) => c.videoIds));
+  const curated = input.commercials ?? [];
+  // One lookup for clips and commercials: same cache, same batches.
+  const extra = await input.metaLookup([...new Set([...clipIds, ...curated.map((c) => c.id)])]);
   report.quotaUnits = extra.quotaUnits;
   const discarded = new Set<string>();
   for (const [id, lookup] of extra.found) {
-    if ("discard" in lookup) {
+    if (clipIds.has(id) && "discard" in lookup) {
       discarded.add(id);
       report.discardedVideos[lookup.discard]++;
     }
@@ -158,12 +174,42 @@ export async function build(input: BuildInput): Promise<BuildResult> {
     videos[id] = lookup && "durationSec" in lookup ? { ...meta, durationSec: lookup.durationSec } : meta;
   }
 
+  const commercials = keepPlayableCommercials(curated, extra.found, report);
+
   report.channels = channels.length;
   report.videos = ids.length;
   return {
-    catalog: { schemaVersion: CATALOG_SCHEMA_VERSION, generatedAt: input.generatedAt, channels, videos },
+    catalog: {
+      schemaVersion: CATALOG_SCHEMA_VERSION,
+      generatedAt: input.generatedAt,
+      channels,
+      videos,
+      ...(input.commercials ? { commercials } : {}),
+    },
     report,
   };
+}
+
+/** A commercial needs a known duration (the live grid is built on it), so one the lookup never answered is dropped. */
+function keepPlayableCommercials(
+  curated: readonly CuratedCommercial[],
+  found: ReadonlyMap<string, VideoLookup>,
+  report: BuildReport,
+): CommercialSnapshot[] {
+  const kept: CommercialSnapshot[] = [];
+  for (const commercial of curated) {
+    const lookup = found.get(commercial.id);
+    if (lookup && "durationSec" in lookup) {
+      kept.push({ ...commercial, durationSec: lookup.durationSec });
+      if (lookup.durationSec > LONG_COMMERCIAL_SEC) {
+        report.warnings.push(`comercial ${commercial.id} (${commercial.brand}) dura ${lookup.durationSec}s: pode ser uma coletânea`);
+      }
+    } else {
+      report.commercials.discarded[lookup ? lookup.discard : "sem duração"]++;
+    }
+  }
+  report.commercials.kept = kept.length;
+  return kept;
 }
 
 /** Playlists sorted by section (see `SECTION_ORDER`); unsectioned channels last, in playlist order. */

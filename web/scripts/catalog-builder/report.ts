@@ -9,6 +9,12 @@ const DISCARD_LABELS: Record<DiscardReason, string> = {
   "sem duração": "vídeos sem duração",
 };
 
+const COMMERCIAL_LABELS: Record<DiscardReason, string> = {
+  "privado ou removido": "privados ou removidos",
+  "não embutível": "não embutíveis",
+  "sem duração": "sem duração",
+};
+
 /** The build report as text for the terminal. */
 export function formatReport(report: BuildReport): string {
   const percent = (n: number) =>
@@ -27,6 +33,9 @@ export function formatReport(report: BuildReport): string {
     `  artista + música: ${count(report.metadata.artistAndSong)} (${percent(report.metadata.artistAndSong)})`,
     `  só título original: ${count(report.metadata.titleOnly)} (${percent(report.metadata.titleOnly)})`,
     `  sem metadado: ${count(report.metadata.none)} (${percent(report.metadata.none)})`,
+    `Comerciais:`,
+    `  mantidos: ${count(report.commercials.kept)}`,
+    ...DISCARD_REASONS.map((reason) => `  ${COMMERCIAL_LABELS[reason]}: ${count(report.commercials.discarded[reason])}`),
     `Cota da API usada: ${count(report.quotaUnits)} ${report.quotaUnits === 1 ? "unidade" : "unidades"}`,
   ];
   if (report.warnings.length) lines.push("Avisos:", ...report.warnings.map((w) => `  ${w}`));
