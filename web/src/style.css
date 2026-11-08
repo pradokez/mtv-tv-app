@@ -379,13 +379,8 @@ body {
   white-space: nowrap;
 }
 
-.guide-filter {
-  border-bottom-color: rgb(255 255 255 / 0.4);
-  margin-bottom: 0.5rem;
-}
-
-.guide-filter.focused {
-  border-color: #ffd400;
+.guide-setting {
+  justify-content: space-between;
 }
 
 .guide-value {

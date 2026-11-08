@@ -178,19 +178,25 @@ function createGuideView(deps?: OverlaysViewDeps): { el: HTMLElement; render(sta
   };
 }
 
-function guideItem(row: GuideRow): HTMLElement {
+function settingItem(labelText: string, valueText: string): HTMLElement {
   const li = document.createElement("li");
+  li.className = "guide-row guide-setting";
+  const label = document.createElement("span");
+  label.className = "guide-name";
+  label.textContent = labelText;
+  const value = document.createElement("span");
+  value.className = "guide-value";
+  value.textContent = valueText;
+  li.append(label, value);
+  return li;
+}
+
+function guideItem(row: GuideRow): HTMLElement {
+  if (row.kind === "mode") return settingItem("Modo", row.mode === "live" ? "Ao vivo" : "Fila");
   if (row.kind === "filter") {
-    li.className = "guide-row guide-filter";
-    const label = document.createElement("span");
-    label.className = "guide-name";
-    label.textContent = "Só favoritos";
-    const value = document.createElement("span");
-    value.className = "guide-value";
-    value.textContent = row.ignored ? "Ligado, sem favoritos: ignorado" : row.on ? "Ligado" : "Desligado";
-    li.append(label, value);
-    return li;
+    return settingItem("Só favoritos ao zapear", row.ignored ? "Sem favoritos" : row.on ? "Ligado" : "Desligado");
   }
+  const li = document.createElement("li");
   li.className = "guide-row";
   const icon = document.createElement("span");
   icon.className = "guide-icon";
