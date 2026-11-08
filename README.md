@@ -98,8 +98,8 @@ Para um emulador Android TV já aberto, use `android/scripts/install-tv.sh --dev
 1. Abra o **MTV TV** na linha de apps da TV. Ele sintoniza o último canal visto (no primeiro uso, o primeiro do catálogo).
 2. Troque de canal com **CH+/CH-** ou **↑/↓**. A tarja mostra o canal e o clipe a cada troca.
 3. Aperte **←** para abrir o **guia de canais**: veja o que está no ar, o próximo clipe e escolha um canal com **OK**.
-4. Marque canais como favorito com **→** dentro do guia. Eles sobem para o topo, e a linha "Só favoritos" restringe o zapping a eles.
-5. Alterne entre **ao vivo** e **fila** com a tecla **Menu** (ou a **amarela**). Aparece o aviso "Ao vivo" ou "Fila".
+4. Marque canais como favorito com **→** dentro do guia. Eles sobem para o topo, e a linha "Só favoritos ao zapear" restringe o zapping a eles.
+5. Alterne entre **ao vivo** e **fila** com a linha "Modo" do guia ou com a tecla **Menu** (ou a **amarela**), que mostra o aviso "Ao vivo" ou "Fila".
 6. Aperte **Voltar** para fechar o que estiver aberto. Sem nada aberto, ele pergunta se você quer sair.
 
 O app guarda o último canal, os favoritos, o filtro de favoritos e o modo no armazenamento local da WebView/navegador.
@@ -111,16 +111,16 @@ O app guarda o último canal, os favoritos, o filtro de favoritos e o modo no ar
 | **CH+** / **↑** | `↑`, `PageUp` | Próximo canal | Move o foco para cima | — |
 | **CH-** / **↓** | `↓`, `PageDown` | Canal anterior | Move o foco para baixo | — |
 | **←** | `←` | Abre o guia de canais | — | Alterna entre "Continuar" e "Sair" |
-| **→** | `→` | Fila: pula o clipe. Ao vivo: avisa "Ao vivo: não dá para pular" (a grade segue o relógio) | Marca/desmarca o canal focado como favorito (★) | Alterna entre "Continuar" e "Sair" |
-| **OK** | `Enter` | Mostra a tarja | Sintoniza o canal focado e fecha (na primeira linha, liga/desliga "Só favoritos") | Confirma a opção |
+| **→** | `→` | Fila: pula o clipe. Ao vivo: avisa "Ao vivo não se pula" (a grade segue o relógio) | Marca/desmarca o canal focado como favorito (★) | Alterna entre "Continuar" e "Sair" |
+| **OK** | `Enter` | Mostra a tarja | Sintoniza o canal focado e fecha (nas linhas de ajuste, troca o modo ou liga/desliga "Só favoritos ao zapear") | Confirma a opção |
 | **Voltar** | `Esc` | Abre a confirmação de saída | Fecha o guia | Fecha a confirmação |
 | **Menu** / tecla **amarela** | `M` | Alterna ao vivo ↔ fila | — | — |
 
 Observações:
 
 - A tarja abre a cada troca de canal e o zapping continua funcionando por baixo dela.
-- Sem favoritos, o filtro "Só favoritos" é ignorado e a linha avisa.
-- No modo ao vivo, o guia mostra o clipe no ar e o próximo em cada canal, e atualiza sozinho quando um clipe termina. No modo fila, mostra só os canais.
+- Sem favoritos, o filtro "Só favoritos ao zapear" é ignorado: a linha mostra "Sem favoritos" e aparece o aviso "Sem favoritos: mostrando todos os canais".
+- No modo ao vivo, o guia ocupa a largura da tela, com as colunas Canal, Agora no ar e A seguir, e atualiza sozinho quando um clipe termina. No modo fila, mostra só os canais.
 
 ## Desenvolvimento
 
