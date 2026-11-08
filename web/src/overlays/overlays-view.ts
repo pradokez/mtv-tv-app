@@ -85,7 +85,7 @@ function option(label: string): HTMLElement {
 
 /**
  * The guide is a panel on the left. Rows are rebuilt only when the row list
- * changes (a favorite toggled); moving the focus just flips a class, so
+ * changes (a favorite or a setting toggled); moving the focus just flips a class, so
  * scrolling through 113 channels stays cheap on the TV. The "now on air" text
  * is only computed for the rows around the focus, and again when the first of
  * those clips ends.
