@@ -32,8 +32,28 @@ describe("map", () => {
       expect(map({ key }, state("exitConfirm"))).toEqual({ type: "exitMove" });
     });
 
-    it("ignores arrows elsewhere for now", () => {
-      expect(map({ key: "ArrowLeft" }, state("none"))).toEqual({ type: "none" });
+  });
+
+  describe("guide", () => {
+    it.each(["none", "info"] as const)("opens with ArrowLeft over overlay %s", (overlay) => {
+      expect(map({ key: "ArrowLeft" }, state(overlay))).toEqual({ type: "openGuide" });
+    });
+
+    it("moves the focus with up/down, CH+/CH- and PageUp/PageDown", () => {
+      for (const key of ["ArrowUp", "ChannelUp", "PageUp"]) {
+        expect(map({ key }, state("guide"))).toEqual({ type: "guideUp" });
+      }
+      for (const key of ["ArrowDown", "ChannelDown", "PageDown"]) {
+        expect(map({ key }, state("guide"))).toEqual({ type: "guideDown" });
+      }
+    });
+
+    it("toggles the favorite with ArrowRight instead of skipping", () => {
+      expect(map({ key: "ArrowRight" }, state("guide"))).toEqual({ type: "guideToggle" });
+    });
+
+    it("ignores ArrowLeft once open", () => {
+      expect(map({ key: "ArrowLeft" }, state("guide"))).toEqual({ type: "none" });
     });
   });
 
@@ -47,9 +67,9 @@ describe("map", () => {
       }
     });
 
-    it.each(["guide", "exitConfirm"] as const)("is left to the %s overlay", (overlay) => {
+    it("is left to the exit confirmation", () => {
       for (const key of ["ArrowUp", "ArrowDown", "ChannelUp", "ChannelDown"]) {
-        expect(map({ key }, state(overlay))).toEqual({ type: "none" });
+        expect(map({ key }, state("exitConfirm"))).toEqual({ type: "none" });
       }
     });
   });
@@ -64,7 +84,6 @@ describe("map", () => {
     });
   });
 
-  // The guide arrives with #9.
   it.each(["a"])("maps %s to none", (key) => {
     expect(map({ key }, state("none"))).toEqual({ type: "none" });
   });
