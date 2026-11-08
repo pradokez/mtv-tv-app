@@ -22,18 +22,19 @@ retornar algo diferente de `true` faz a Activity sair.
 
 ## Instalar na TV (TCL C06)
 
-1. Na TV: **Configurações → Sistema → Sobre**, e aperte OK sete vezes em **Build do Android TV** para liberar o modo desenvolvedor.
-2. **Configurações → Sistema → Opções do desenvolvedor**: ligue **Depuração USB** e **Depuração por rede/ADB sobre rede** (o nome varia entre versões).
-3. Veja o IP da TV em **Configurações → Rede e Internet**. Mac e TV precisam estar na mesma rede.
-4. No Mac, rode:
+1. Se quiser os canais reais, gere antes o snapshot em `../web/` com `YOUTUBE_API_KEY=... pnpm catalog`. Sem `../web/public/catalog.json`, o script de instalação avisa que usará o catálogo de exemplo de 2 canais.
+2. Na TV: **Configurações → Sistema → Sobre**, e aperte OK sete vezes em **Build do Android TV** para liberar o modo desenvolvedor.
+3. **Configurações → Sistema → Opções do desenvolvedor**: ligue **Depuração USB** e **Depuração por rede/ADB sobre rede** (o nome varia entre versões).
+4. Veja o IP da TV em **Configurações → Rede e Internet**. Mac e TV precisam estar na mesma rede.
+5. No Mac, rode:
 
    ```bash
    android/scripts/install-tv.sh 192.168.0.50      # porta padrão 5555
    ```
 
-   O script faz `adb connect`, compila (`./gradlew assembleDebug`), instala com `adb install -r` e abre o app.
-5. Na primeira conexão a TV mostra "Permitir depuração?". Escolha **Sempre permitir** e rode o script de novo se precisar.
-6. O app aparece na tela inicial (linha de apps) com banner.
+   O script compila `../web/` com `pnpm build`, usa temporariamente o resultado em `app/src/main/assets/web/`, compila (`./gradlew assembleDebug`), instala com `adb install -r` e abre o app. Ao terminar ou falhar, restaura os assets versionados.
+6. Na primeira conexão a TV mostra "Permitir depuração?". Escolha **Sempre permitir** e rode o script de novo se precisar.
+7. O app aparece na tela inicial (linha de apps) com banner.
 
 ## Emulador
 
