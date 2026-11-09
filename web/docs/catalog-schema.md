@@ -45,6 +45,8 @@ Os tipos TypeScript em [`src/catalog/schema.ts`](../src/catalog/schema.ts) são 
 
 - Os comerciais (`commercials`) são uma lista à parte: não são canais, não aparecem no guia nem no zapping e não estão em `videos`. Vêm da curadoria própria em [`web/curadoria/comerciais-br.json`](../curadoria/comerciais-br.json), validados pelo Catalog Builder. Campo ausente vale lista vazia; ID repetido mantém a primeira ocorrência; entrada inválida gera `CatalogError`.
 
+- Os canais próprios vêm da curadoria em [`web/curadoria/canais-proprios.json`](../curadoria/canais-proprios.json) (`{ "channels": [{ id, name, icon, afterSection?, videos: [{ id, artist, song }] }] }`), validada pelo Catalog Builder. Entram no snapshot como qualquer canal, logo depois do último canal da seção do site indicada em `afterSection` (ex.: `decades`; sem ela, no fim). `artist` e `song` da curadoria valem no lugar do índice de busca. Vídeo privado, removido, não embutível ou sem duração é descartado; canal que fica vazio é omitido. ID de canal que o site já usa é ignorado, com aviso.
+
 ## Geração
 
 `pnpm catalog` exige a chave da YouTube Data API v3 em `YOUTUBE_API_KEY` (só por variável de ambiente, nunca no repositório). As consultas vão em lotes de 50 IDs (`videos.list`, `part=contentDetails,status`, 1 unidade de cota por lote, ~2.150 unidades na primeira execução). As respostas ficam em cache em `web/.cache/youtube-meta.json`, ignorado pelo git e gravado após cada lote: uma execução interrompida retoma de onde parou e as seguintes só consultam IDs novos.
