@@ -9,11 +9,12 @@ cd "$(dirname "$0")/.."
 . "$PWD/scripts/env.sh"
 
 TV="${1:-${TV_IP:-$TV_IP_DEFAULT}}"
-APP_ID="mtvtv00001.MtvTv"
-WGT="$(ls "$PWD"/build/*.wgt 2>/dev/null | head -1 || true)"
-[ -n "$WGT" ] || { echo "Nenhum .wgt em tizen/build; rode scripts/build-wgt.sh antes." >&2; exit 1; }
+APP_ID="$(sed -n 's/.*<tizen:application id="\([^"]*\)".*/\1/p' config.xml)"
+[ -n "$APP_ID" ] || { echo "Não achei o id do app em tizen/config.xml." >&2; exit 1; }
+WGT="$PWD/build/$WGT_NAME"
+[ -f "$WGT" ] || { echo "Nenhum $WGT_NAME em tizen/build; rode scripts/build-wgt.sh antes." >&2; exit 1; }
 
-nc -z -w3 "$TV" 26101 || { echo "Porta 26101 fechada em $TV: reative o modo desenvolvedor e reinicie a TV." >&2; exit 1; }
-sdb connect "$TV"
-tizen install -n "$WGT" -s "$TV:26101"
-tizen run -p "$APP_ID" -s "$TV:26101"
+nc -z -w3 "$TV" "$SDB_PORT" || { echo "Porta $SDB_PORT fechada em $TV: reative o modo desenvolvedor e reinicie a TV." >&2; exit 1; }
+sdb connect "$TV:$SDB_PORT"
+tizen install -n "$WGT" -s "$TV:$SDB_PORT"
+tizen run -p "$APP_ID" -s "$TV:$SDB_PORT"
