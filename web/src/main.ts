@@ -10,6 +10,7 @@ import { watchConnectivity } from "./lib/connectivity";
 import { mathRandom } from "./lib/random";
 import { FakePlayer, mountFakePlayerView } from "./player/fake-player";
 import type { PlayerAdapter } from "./player/player";
+import { installChromium69Polyfills } from "./platform/chromium69-polyfills";
 import { detectPlatform } from "./platform/platform";
 import { createYouTubePlayer } from "./player/youtube-player";
 import { commercialLines, lowerThirdLines } from "./overlays/lower-third";
@@ -21,6 +22,9 @@ import { createStatusOverlay } from "./overlays/status-overlay";
 import { createPreferences, type PlaybackMode } from "./preferences/preferences";
 import { createLiveSchedule } from "./schedule/live-schedule";
 import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tuner/tuner";
+
+// Statically replaced by Vite: the other builds drop the polyfills entirely.
+if (import.meta.env.MODE === "tizen") installChromium69Polyfills();
 
 const platform = detectPlatform();
 platform.init();
