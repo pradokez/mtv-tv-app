@@ -7,7 +7,7 @@ Empacota o app web como `.wgt` e instala na Samsung QN55Q80TAGXZD (Tizen 5.5) po
 | `config.xml` | Manifesto: id `mtvtv00001.MtvTv`, tela cheia, privilégios `internet`, `network.get`, `power` e `tv.inputdevice` |
 | `icon.png` | Ícone |
 | `test-page/` | Página mínima que mostra `navigator.userAgent` (primeiro marco) |
-| `scripts/build-wgt.sh` | Gera o `.wgt` assinado em `tizen/build/` |
+| `scripts/build-wgt.sh` | Gera o `.wgt` assinado em `tizen/build/`; falha se o pacote sair sem assinatura |
 | `scripts/install-tv.sh` | Instala o `.wgt` na TV e abre o app |
 
 ## Uso
@@ -62,7 +62,7 @@ O certificado de distribuidor expira. Quando a instalação falhar com erro de c
 Medido na TV real em 2026-11-08 com a página de teste: **Chromium 69.0.3497.106** (Tizen 5.5, armv7). O `userAgent` não tem `Chrome/`:
 
 ```
-Mozilla/50 (SMART-TV; LINUX; Tizen 5.5) AppleWebKit/537.36 (KHTML, like Gecko) 69.0.3497.106/5.5 TV Safari/537.36
+Mozilla/5.0 (SMART-TV; LINUX; Tizen 5.5) AppleWebKit/537.36 (KHTML, like Gecko) 69.0.3497.106/5.5 TV Safari/537.36
 ```
 
 Isso confirma o alvo `chrome69` previsto no PRD #40 para o build do app.
