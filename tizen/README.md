@@ -14,11 +14,13 @@ Empacota o app web como `.wgt` e instala na Samsung QN55Q80TAGXZD (Tizen 5.5) po
 
 ```bash
 tizen/scripts/build-wgt.sh --test   # página de teste (padrão)
-tizen/scripts/build-wgt.sh --app    # rebuilda web/ (pnpm build) e empacota web/dist
+tizen/scripts/build-wgt.sh --app    # rebuilda web/ (pnpm build:tizen) e empacota web/dist-tizen
 tizen/scripts/install-tv.sh         # IP padrão 192.168.0.13; ou install-tv.sh <ip> / TV_IP=<ip>
 ```
 
-`--app` sempre roda `pnpm build` antes de empacotar, para nunca instalar um `dist/` velho. O alvo de Chromium do build (a Q80 tem um Chromium antigo) é tratado em outra fatia do PRD.
+`--app` sempre roda `pnpm build:tizen` antes de empacotar, para nunca instalar um `dist-tizen/` velho. Esse build (`vite build --mode tizen`) converte JS e CSS para `chrome69`, o Chromium da Q80 (ver [Chromium da Q80](#chromium-da-q80)), e grava em `web/dist-tizen/`; o `pnpm build` normal (web e Android) continua igual em `web/dist/`.
+
+Depois do build, `web/scripts/check-bundle.ts` confere o `dist-tizen/` e falha o build (e o `--app`) se sobrar sintaxe acima do Chromium 69: `?.`, `??`, BigInt ou qualquer coisa além do ES2020 no JS, e `inset`, `aspect-ratio`, `:is()`, `:where()`, `:has()` ou `@layer` no CSS. Para conferir outro build à mão: `cd web && node scripts/check-bundle.ts dist`. O que a conversão não resolve (gap em flex, `backdrop-filter`) está em [`web/docs/chromium69-apis.md`](../web/docs/chromium69-apis.md).
 
 > A TV é compartilhada e tem dados reais de uso. Confirme com o dono antes de instalar ou apagar qualquer coisa nela.
 
