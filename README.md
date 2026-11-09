@@ -42,6 +42,7 @@ Capturas da TV real.
 | --- | --- |
 | `web/` | App web em TypeScript (Vite): player, lógica dos canais, guia e sobreposições. Roda no navegador do Mac para desenvolver. |
 | `android/` | Casca Kotlin com uma WebView em tela cheia que carrega o build de `web/`, mais os scripts de instalação na TV. Detalhes em [`android/README.md`](android/README.md). |
+| `tizen/` | Casca Tizen (Samsung Q80): manifesto, ícone e scripts que geram o `.wgt` assinado e instalam na TV. Detalhes em [`tizen/README.md`](tizen/README.md). |
 | `docs/` | Relatórios, como o [teste de resistência na TV](docs/teste-resistencia/README.md). |
 
 ## Instalação

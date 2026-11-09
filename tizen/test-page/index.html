@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>MTV TV — teste Tizen</title>
+    <style>
+      body { margin: 0; background: #000; color: #ffde00; font: 40px/1.4 sans-serif; padding: 80px; }
+      h1 { margin: 0 0 40px; } code { color: #fff; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <h1>MTV TV — página de teste Tizen</h1>
+    <p>userAgent:<br /><code id="ua"></code></p>
+    <p>Chromium: <code id="chromium"></code></p>
+    <p>Tela: <code id="screen"></code></p>
+    <script>
+      var ua = navigator.userAgent;
+      // O Tizen não usa "Chrome/": o UA traz "... 69.0.3497.106/5.5 TV Safari/537.36".
+      var m = /Chrome\/([\d.]+)/.exec(ua) || /(\d+\.\d+\.\d+\.\d+)\//.exec(ua);
+      document.getElementById("ua").textContent = ua;
+      document.getElementById("chromium").textContent = m ? m[1] : "não identificado";
+      document.getElementById("screen").textContent =
+        window.innerWidth + "x" + window.innerHeight + " @" + window.devicePixelRatio;
+    </script>
+  </body>
+</html>
