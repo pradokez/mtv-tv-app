@@ -7,7 +7,7 @@
  * the build instead of a black screen on the TV.
  *
  * JS is parsed with acorn as ES2020 and then ES2020 syntax Chromium 69 lacks
- * (`?.`, `??`, BigInt literals) is rejected; anything newer (class fields,
+ * (`?.`, `??`) is rejected; anything newer (class fields,
  * `??=`, ...) fails to parse at all. `import()` and `import.meta` are fine.
  *
  * CSS is checked only for what the `chrome69` CSS target is supposed to
@@ -54,7 +54,6 @@ function jsViolation(node: Node): string | undefined {
   if (node.type === "LogicalExpression" && (node as Node & { operator: string }).operator === "??") {
     return "nullish coalescing (??)";
   }
-  if (node.type === "Literal" && "bigint" in node) return "literal BigInt";
   return undefined;
 }
 

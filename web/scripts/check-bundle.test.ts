@@ -8,7 +8,6 @@ describe("checkJs", () => {
     ["optional chaining", "const x = a?.b;", "optional chaining (?.)"],
     ["optional call", "a.b?.();", "optional chaining (?.)"],
     ["nullish coalescing", "const x = a ?? b;", "nullish coalescing (??)"],
-    ["BigInt literal", "const x = 1n;", "literal BigInt"],
   ])("rejects %s", (_name, source, message) => {
     expect(checkJs(source)).toEqual([expect.objectContaining({ line: 1, message })]);
   });
@@ -37,6 +36,7 @@ describe("checkJs", () => {
       "const re = /(?<year>\\d{4})/su;",
       "try { f(); } catch { g(); }",
       "const ternary = ok ? .5 : 1;",
+      "const big = 10n;",
       "import(\"./chunk.js\");",
       "const url = new URL(\"a\", import.meta.url);",
       "export { gen };",
