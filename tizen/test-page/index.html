@@ -15,7 +15,8 @@
     <p>Tela: <code id="screen"></code></p>
     <script>
       var ua = navigator.userAgent;
-      var m = /Chrome\/([\d.]+)/.exec(ua);
+      // O Tizen não usa "Chrome/": o UA traz "... 69.0.3497.106/5.5 TV Safari/537.36".
+      var m = /Chrome\/([\d.]+)/.exec(ua) || /(\d+\.\d+\.\d+\.\d+)\//.exec(ua);
       document.getElementById("ua").textContent = ua;
       document.getElementById("chromium").textContent = m ? m[1] : "não identificado";
       document.getElementById("screen").textContent =

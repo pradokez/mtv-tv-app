@@ -31,4 +31,6 @@ OUT="$TIZEN_DIR/build"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 tizen package -t wgt -s "$CERT_PROFILE" -o "$OUT" -- "$STAGE"
-echo "Pacote: $(ls "$OUT"/*.wgt)"
+# O pkgcmd da TV falha com espaço no nome do arquivo ("MTV TV.wgt").
+for f in "$OUT"/*.wgt; do mv "$f" "$OUT/mtv-tv.wgt"; done
+echo "Pacote: $OUT/mtv-tv.wgt"

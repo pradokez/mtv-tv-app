@@ -4,7 +4,7 @@ Empacota o app web como `.wgt` e instala na Samsung QN55Q80TAGXZD (Tizen 5.5) po
 
 | Arquivo | Para quê |
 | --- | --- |
-| `config.xml` | Manifesto: id `mtvtv0001.MtvTv`, tela cheia, privilégios `internet`, `network.get`, `power` e `tv.inputdevice` |
+| `config.xml` | Manifesto: id `mtvtv00001.MtvTv`, tela cheia, privilégios `internet`, `network.get`, `power` e `tv.inputdevice` |
 | `icon.png` | Ícone |
 | `test-page/` | Página mínima que mostra `navigator.userAgent` (primeiro marco) |
 | `scripts/build-wgt.sh` | Gera o `.wgt` assinado em `tizen/build/` |
@@ -49,8 +49,20 @@ sdb devices                # deve listar a Q80
 O certificado de distribuidor expira. Quando a instalação falhar com erro de certificado:
 1. Abra o **Certificate Manager** (`~/tizen-studio/tools/certificate-manager`), entre com a conta Samsung e crie um novo certificado de distribuidor, marcando o DUID acima.
 2. Aponte o perfil `mtvtv` para o novo certificado (Certificate Manager, aba de perfis) ou crie outro e passe `CERT_PROFILE=<nome>` aos scripts.
-3. Rebuilde (`build-wgt.sh`) e reinstale (`install-tv.sh`). Se der conflito com a versão instalada, rode `tizen uninstall -p mtvtv0001.MtvTv -t 192.168.0.13:26101` e instale de novo.
+3. Rebuilde (`build-wgt.sh`) e reinstale (`install-tv.sh`). Se der conflito com a versão instalada, rode `tizen uninstall -p mtvtv00001.MtvTv -s 192.168.0.13:26101` e instale de novo.
+
+## Problemas conhecidos
+
+- `Failed to install Tizen application.` sem mais detalhes: o `pkgcmd` da TV falha com espaço no nome do arquivo (`MTV TV.wgt`). O `build-wgt.sh` renomeia o pacote para `mtv-tv.wgt`. O id do pacote também precisa ter exatamente 10 caracteres alfanuméricos (`mtvtv00001`).
+- Os comandos do Tizen usam `-s <ip>:26101` (serial); `-t` espera o nome do dispositivo (`QN55Q80TAGXZD`).
+- `sdb shell` é bloqueado nesta TV, então o log do aparelho não está acessível; o `userAgent` é lido na tela.
 
 ## Chromium da Q80
 
-A preencher depois da primeira instalação (página de teste, linha "Chromium").
+Medido na TV real em 2026-11-08 com a página de teste: **Chromium 69.0.3497.106** (Tizen 5.5, armv7). O `userAgent` não tem `Chrome/`:
+
+```
+Mozilla/50 (SMART-TV; LINUX; Tizen 5.5) AppleWebKit/537.36 (KHTML, like Gecko) 69.0.3497.106/5.5 TV Safari/537.36
+```
+
+Isso confirma o alvo `chrome69` previsto no PRD #40 para o build do app.
