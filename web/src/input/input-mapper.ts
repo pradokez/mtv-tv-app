@@ -1,4 +1,4 @@
-import type { Command, KeyInput, UiState } from "./commands";
+import { PLAY_PAUSE_KEY, type Command, type KeyInput, type UiState } from "./commands";
 
 const NONE: Command = { type: "none" };
 
@@ -46,6 +46,7 @@ export function map(event: KeyInput, ui: UiState): Command {
     case "M":
     case "ContextMenu":
     case "ColorF2Yellow":
+    case PLAY_PAUSE_KEY:
       return zappable ? { type: "toggleMode" } : NONE;
     default:
       return NONE;

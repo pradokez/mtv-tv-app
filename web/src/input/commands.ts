@@ -47,3 +47,11 @@ export interface UiState {
 export interface KeyInput {
   key: string;
 }
+
+/**
+ * Logical key for the remote's Play/Pause button (standard DOM value). It
+ * toggles live ↔ queue, like yellow/Menu/M, and its default (pausing media)
+ * is always suppressed. Platform layers that receive a native Play/Pause code
+ * must convert it to this `key` before dispatching the event.
+ */
+export const PLAY_PAUSE_KEY = "MediaPlayPause";
