@@ -349,4 +349,63 @@ describe("build", () => {
       expect(report.commercials.kept).toBe(0);
     });
   });
+
+  describe("own channels", () => {
+    const X = "Jb2stN7kH28";
+    const Y = "8xg3vE8Ie_E";
+    const own = (fields = {}) => ({
+      id: "taylor-swift",
+      name: "Taylor Swift",
+      icon: "🦋",
+      afterSection: "decades",
+      videos: [
+        { id: X, artist: "Taylor Swift", song: "Our Song" },
+        { id: Y, artist: "Taylor Swift", song: "Love Story" },
+      ],
+      ...fields,
+    });
+
+    it("puts the channel right after the last channel of its section, with its own artist and song", async () => {
+      const { catalog } = await build(
+        input({
+          playlists: { "80s": [A], "90s": [C], rock: [D] },
+          channelConfig: {
+            info: { "80s": { name: "80s", icon: "📼" }, "90s": { name: "90s", icon: "💿" }, rock: { name: "Rock", icon: "🎸" } },
+            sections: [
+              { id: "decades", channels: ["80s", "90s"] },
+              { id: "curated", channels: ["rock"] },
+            ],
+          },
+          ownChannels: [own()],
+          metaLookup: lookupOf({ [X]: { durationSec: 200 }, [Y]: { durationSec: 230 } }),
+        }),
+      );
+
+      expect(catalog.channels.map((c) => [c.id, c.order])).toEqual([["80s", 0], ["90s", 1], ["taylor-swift", 2], ["rock", 3]]);
+      expect(catalog.channels[2]).toMatchObject({ name: "Taylor Swift", icon: "🦋", videoIds: [X, Y] });
+      expect(catalog.videos[X]).toEqual({ artist: "Taylor Swift", song: "Our Song", durationSec: 200 });
+    });
+
+    it("goes to the end when the section does not exist", async () => {
+      const { catalog } = await build(input({ ownChannels: [own({ afterSection: "nope" })] }));
+
+      expect(catalog.channels.map((c) => c.id)).toEqual(["80s", "90s", "taylor-swift"]);
+    });
+
+    it("drops unplayable clips and the channel itself when none is left", async () => {
+      const { catalog, report } = await build(
+        input({ ownChannels: [own()], metaLookup: lookupOf({ [X]: { discard: "não embutível" }, [Y]: { discard: "privado ou removido" } }) }),
+      );
+
+      expect(catalog.channels.map((c) => c.id)).not.toContain("taylor-swift");
+      expect(report.droppedChannels).toContainEqual({ id: "taylor-swift", reason: "vazio" });
+    });
+
+    it("ignores a channel whose id the site already uses, with a warning", async () => {
+      const { catalog, report } = await build(input({ ownChannels: [own({ id: "80s" })] }));
+
+      expect(catalog.channels.find((c) => c.id === "80s")?.videoIds).toEqual([A, B]);
+      expect(report.warnings).toEqual([expect.stringContaining("80s")]);
+    });
+  });
 });

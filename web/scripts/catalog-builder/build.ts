@@ -7,6 +7,7 @@ import {
 } from "../../src/catalog/schema.ts";
 import type { ChannelConfig, ChannelInfo } from "./channel-config.ts";
 import type { CuratedCommercial } from "./commercials.ts";
+import type { OwnChannel } from "./own-channels.ts";
 
 /** One entry of the site's search index. `y` is the upload year and is never used. */
 export interface SearchEntry {
@@ -49,6 +50,8 @@ export interface BuildInput {
   generatedAt: string;
   /** The hand-curated commercials. Without them the snapshot has no breaks. */
   commercials?: readonly CuratedCommercial[];
+  /** The hand-curated channels, added to the site's. Their artist and song win over the search index. */
+  ownChannels?: readonly OwnChannel[];
 }
 
 export interface DroppedChannel {
@@ -114,6 +117,7 @@ export async function build(input: BuildInput): Promise<BuildResult> {
   };
 
   const candidates: { id: string; info: ChannelInfo; videoIds: string[] }[] = [];
+  const ownMeta = new Map<string, VideoSnapshot>();
   for (const [id, playlist] of byChannelOrder(input.playlists, input.channelConfig)) {
     const info = input.channelConfig.info[id];
     if (!info) {
@@ -133,6 +137,8 @@ export async function build(input: BuildInput): Promise<BuildResult> {
     }
     candidates.push({ id, info, videoIds: [...videoIds] });
   }
+
+  addOwnChannels(candidates, ownMeta, input.ownChannels ?? [], input.channelConfig, report);
 
   const clipIds = new Set(candidates.flatMap((c) => c.videoIds));
   const curated = input.commercials ?? [];
@@ -166,7 +172,7 @@ export async function build(input: BuildInput): Promise<BuildResult> {
   const index = new Map(input.searchIndex.map((e) => [e.id, e]));
   const videos: Record<string, VideoSnapshot> = {};
   for (const id of ids) {
-    const meta = displayMeta(index.get(id));
+    const meta = ownMeta.get(id) ?? displayMeta(index.get(id));
     if (meta.artist) report.metadata.artistAndSong++;
     else if (meta.title) report.metadata.titleOnly++;
     else report.metadata.none++;
@@ -188,6 +194,31 @@ export async function build(input: BuildInput): Promise<BuildResult> {
     },
     report,
   };
+}
+
+/**
+ * Puts the curated channels into `candidates`: right after the last channel of
+ * their `afterSection` (end of the list when the section is absent). A channel
+ * whose id the site already uses is skipped with a warning.
+ */
+function addOwnChannels(
+  candidates: { id: string; info: ChannelInfo; videoIds: string[] }[],
+  ownMeta: Map<string, VideoSnapshot>,
+  own: readonly OwnChannel[],
+  config: ChannelConfig,
+  report: BuildReport,
+): void {
+  for (const channel of own) {
+    if (candidates.some((c) => c.id === channel.id)) {
+      report.warnings.push(`canal próprio ${channel.id}: o site já tem um canal com esse ID, o próprio foi ignorado`);
+      continue;
+    }
+    const sectionIds = new Set(config.sections.find((s) => s.id === channel.afterSection)?.channels);
+    const lastOfSection = candidates.map((c) => sectionIds.has(c.id)).lastIndexOf(true);
+    const entry = { id: channel.id, info: { name: channel.name, icon: channel.icon }, videoIds: channel.videos.map((v) => v.id) };
+    candidates.splice(lastOfSection === -1 ? candidates.length : lastOfSection + 1, 0, entry);
+    for (const { id, artist, song } of channel.videos) ownMeta.set(id, { artist, song });
+  }
 }
 
 /** A commercial needs a known duration (the live grid is built on it), so one the lookup never answered is dropped. */
