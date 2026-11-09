@@ -14,6 +14,11 @@ export interface Platform {
   exitApp(): void;
   /** Prepara a casca na inicialização (ex.: registrar teclas na Tizen). Chamar uma vez. */
   init(): void;
+  /**
+   * Pede à casca que mantenha a tela acesa enquanto o app toca. Devolve a função
+   * que libera o pedido. Só a Tizen age; nas demais é um no-op.
+   */
+  keepScreenOn(): () => void;
   /** `true` quando a casca libera autoplay com som sem gesto do usuário. */
   readonly autoplayAllowed: boolean;
 }
@@ -23,18 +28,62 @@ declare global {
     /** Ponte injetada pela casca Android; ausente no navegador e na Tizen. */
     MtvTv?: { exitApp(): void };
     /** API injetada pelo runtime da Tizen; ausente nas outras plataformas. */
-    tizen?: unknown;
+    tizen?: TizenApi;
   }
+}
+
+/** Recorte da API `tizen` que o app usa. */
+interface TizenApi {
+  application?: { getCurrentApplication(): { exit(): void } };
+  power?: {
+    request(resource: "SCREEN", state: "SCREEN_NORMAL"): void;
+    release(resource: "SCREEN"): void;
+  };
+}
+
+const noop = (): void => {};
+
+/** A API da Tizen lança sem o privilégio ou fora da TV; o app não deve cair por isso. */
+function safely(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    // Sem o que fazer: o app segue tocando.
+  }
+}
+
+function tizenPlatform(tizen: TizenApi, win: Window): Platform {
+  let held = false;
+  const release = (): void => {
+    if (!held) return;
+    held = false;
+    safely(() => tizen.power?.release("SCREEN"));
+  };
+  return {
+    kind: "tizen",
+    init: () => installTizenKeys(win),
+    exitApp() {
+      release();
+      safely(() => tizen.application?.getCurrentApplication().exit());
+    },
+    keepScreenOn() {
+      if (!held) {
+        held = true;
+        safely(() => tizen.power?.request("SCREEN", "SCREEN_NORMAL"));
+      }
+      return release;
+    },
+    autoplayAllowed: true,
+  };
 }
 
 export function detectPlatform(win: Window = window): Platform {
   if (win.tizen !== undefined) {
-    // Saída real na Tizen vem em outra issue; por ora só detecta e liga as teclas.
-    return { kind: "tizen", init: () => installTizenKeys(win), exitApp() {}, autoplayAllowed: true };
+    return tizenPlatform(win.tizen, win);
   }
   const bridge = win.MtvTv;
   if (bridge !== undefined) {
-    return { kind: "android", init() {}, exitApp: () => bridge.exitApp(), autoplayAllowed: true };
+    return { kind: "android", init: noop, exitApp: () => bridge.exitApp(), keepScreenOn: () => noop, autoplayAllowed: true };
   }
-  return { kind: "browser", init() {}, exitApp() {}, autoplayAllowed: false };
+  return { kind: "browser", init: noop, exitApp: noop, keepScreenOn: () => noop, autoplayAllowed: false };
 }
