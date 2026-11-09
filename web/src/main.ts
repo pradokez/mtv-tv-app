@@ -10,6 +10,7 @@ import { watchConnectivity } from "./lib/connectivity";
 import { mathRandom } from "./lib/random";
 import { FakePlayer, mountFakePlayerView } from "./player/fake-player";
 import type { PlayerAdapter } from "./player/player";
+import { detectPlatform } from "./platform/platform";
 import { createYouTubePlayer } from "./player/youtube-player";
 import { commercialLines, lowerThirdLines } from "./overlays/lower-third";
 import { guideRows } from "./overlays/guide";
@@ -20,6 +21,8 @@ import { createStatusOverlay } from "./overlays/status-overlay";
 import { createPreferences, type PlaybackMode } from "./preferences/preferences";
 import { createLiveSchedule } from "./schedule/live-schedule";
 import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tuner/tuner";
+
+const platform = detectPlatform();
 
 async function main(): Promise<void> {
   const stage = document.getElementById("stage")!;
@@ -41,7 +44,7 @@ async function main(): Promise<void> {
 
   const overlays = createOverlays({
     clock: systemClock,
-    onExit: () => window.MtvTv?.exitApp(),
+    onExit: () => platform.exitApp(),
     onChange: mountOverlaysView(document.getElementById("overlays")!, {
       clock: systemClock,
       onAir: (channelId, nowMs) => guideOnAir(catalog, schedule, channelId, nowMs),
@@ -168,7 +171,7 @@ async function main(): Promise<void> {
 
   // Contract with the Android shell: it calls this for every remote key and
   // exits the app on Back unless we answer `true`. Leaving is only possible
-  // through the exit confirmation (`MtvTv.exitApp`), so every key is handled.
+  // through the exit confirmation (`platform.exitApp`), so every key is handled.
   window.dispatchTvKey = (type, key, code, keyCode) => {
     document.dispatchEvent(
       new KeyboardEvent(type, { key, code, keyCode, which: keyCode, bubbles: true, cancelable: true }),
@@ -179,8 +182,6 @@ async function main(): Promise<void> {
 
 declare global {
   interface Window {
-    /** Bridge injected by the Android shell; absent in a regular browser. */
-    MtvTv?: { exitApp(): void };
     dispatchTvKey?: (type: string, key: string, code: string, keyCode: number, androidKeyCode?: number) => boolean;
   }
 }
@@ -194,7 +195,7 @@ async function loadCatalog(): Promise<Catalog> {
 /** `?player=fake` swaps YouTube for a debug panel, to develop without network. */
 function createPlayer(stage: HTMLElement): PlayerAdapter {
   if (new URLSearchParams(window.location.search).get("player") !== "fake") {
-    return createYouTubePlayer(stage, { autoplayAllowed: window.MtvTv !== undefined });
+    return createYouTubePlayer(stage, { autoplayAllowed: platform.autoplayAllowed });
   }
   const fake = new FakePlayer();
   mountFakePlayerView(stage, fake);

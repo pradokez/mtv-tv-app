@@ -12,7 +12,7 @@ App Android TV de uso pessoal que toca canais de videoclipes no estilo da MTV an
 - [Guia de controles](#guia-de-controles)
 - [Desenvolvimento](#desenvolvimento)
 - [Catálogo de canais](#catálogo-de-canais)
-- [Contrato com a casca Android](#contrato-com-a-casca-android)
+- [Contrato com a casca (Android ou Tizen)](#contrato-com-a-casca-android-ou-tizen)
 - [Privacidade](#privacidade)
 - [Documentação adicional](#documentação-adicional)
 
@@ -164,7 +164,9 @@ pnpm catalog     # gera o catálogo real (exige YOUTUBE_API_KEY)
 - Cada consulta pede 50 vídeos e custa 1 unidade: a primeira execução gasta ~2.150 unidades (a cota diária padrão é 10.000).
 - As respostas ficam em `web/.cache/youtube-meta.json` (ignorado pelo git) e o cache é gravado após cada lote: se a execução parar no meio (cota, rede), rodar de novo continua de onde parou, e execuções seguintes só consultam vídeos novos. Para consultar tudo de novo, apague o arquivo.
 
-## Contrato com a casca Android
+## Contrato com a casca (Android ou Tizen)
+
+O app roda dentro de uma casca: Android (WebView) ou Tizen. Só `web/src/platform/platform.ts` conhece a casca: ele detecta a plataforma (`window.MtvTv` na Android, `tizen` na Tizen, senão navegador) e expõe `kind`, `exitApp()` e `autoplayAllowed`. O resto do app consome essa interface. Na Tizen a detecção já existe, com autoplay permitido; a saída real e o registro de teclas ficam para outras issues.
 
 - **Build:** `pnpm build` gera `web/dist/` (`index.html`, `assets/`, `catalog.json`), com caminhos relativos.
 - **Origem:** sirva o build pelo `WebViewAssetLoader` (`https://appassets.androidplatform.net/assets/web/index.html`), não por `file://`. O app carrega o catálogo com `fetch`, que não funciona em `file://`, e o player do YouTube exige uma origem HTTP(S).
