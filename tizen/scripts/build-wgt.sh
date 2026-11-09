@@ -2,7 +2,7 @@
 # Gera o .wgt assinado com o perfil Samsung (padrão: mtvtv).
 # Uso: tizen/scripts/build-wgt.sh [--test|--app]
 #   --test  página de teste (navigator.userAgent), sem catálogo (padrão)
-#   --app   rebuilda o app web (pnpm build) e empacota web/dist
+#   --app   rebuilda o app web para Chromium 69 (pnpm build:tizen) e empacota web/dist-tizen
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -15,9 +15,9 @@ MODE="${1:---test}"
 case "$MODE" in
   --test) SRC="$TIZEN_DIR/test-page" ;;
   --app)
-    echo "Compilando o app web..."
-    (cd "$REPO_DIR/web" && pnpm build)
-    SRC="$REPO_DIR/web/dist"
+    echo "Compilando o app web para Chromium 69..."
+    (cd "$REPO_DIR/web" && pnpm build:tizen)
+    SRC="$REPO_DIR/web/dist-tizen"
     ;;
   *) echo "Uso: $0 [--test|--app]" >&2; exit 1 ;;
 esac

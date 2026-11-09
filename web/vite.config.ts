@@ -28,17 +28,28 @@ function catalogFallback(): Plugin {
   };
 }
 
+/**
+ * `--mode tizen` targets the Samsung Q80 (Chromium 69): syntax and CSS are
+ * lowered to `chrome69` and written to `dist-tizen/`, which
+ * `scripts/check-bundle.ts` then verifies. The default build is untouched.
+ */
+const TIZEN_TARGET = "chrome69";
+
 // `base: "./"` keeps asset paths relative so the build works when the
 // Android shell serves `web/dist/` through WebViewAssetLoader.
-export default defineConfig({
-  base: "./",
-  plugins: [catalogFallback()],
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-  },
-  test: {
-    environment: "node",
-    include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
-  },
+export default defineConfig(({ mode }) => {
+  const tizen = mode === "tizen";
+  return {
+    base: "./",
+    plugins: [catalogFallback()],
+    build: {
+      outDir: tizen ? "dist-tizen" : "dist",
+      emptyOutDir: true,
+      ...(tizen && { target: TIZEN_TARGET, cssTarget: TIZEN_TARGET }),
+    },
+    test: {
+      environment: "node",
+      include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
+    },
+  };
 });
