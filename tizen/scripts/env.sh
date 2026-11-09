@@ -8,4 +8,7 @@ if [ -z "${JAVA_HOME:-}" ]; then
 fi
 [ -n "${JAVA_HOME:-}" ] && export PATH="$JAVA_HOME/bin:$PATH"
 export TV_IP_DEFAULT=192.168.0.13
+export SDB_PORT=26101
 export CERT_PROFILE="${CERT_PROFILE:-mtvtv}"
+# Sem espaço no nome: o pkgcmd da TV falha com "MTV TV.wgt".
+export WGT_NAME=mtv-tv.wgt
