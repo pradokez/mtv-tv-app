@@ -23,6 +23,7 @@ import { createLiveSchedule } from "./schedule/live-schedule";
 import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tuner/tuner";
 
 const platform = detectPlatform();
+platform.init();
 
 async function main(): Promise<void> {
   const stage = document.getElementById("stage")!;
