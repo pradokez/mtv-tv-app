@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { UiState } from "./commands";
+import { PLAY_PAUSE_KEY, type UiState } from "./commands";
 import { map } from "./input-mapper";
 
 const state = (overlay: UiState["overlay"]): UiState => ({ overlay, mode: "queue" });
@@ -103,14 +103,21 @@ describe("map", () => {
   });
 
   describe("mode toggle", () => {
-    it.each(["m", "M", "ContextMenu", "ColorF2Yellow"])("toggles with %s", (key) => {
+    it.each(["m", "M", "ContextMenu", "ColorF2Yellow", PLAY_PAUSE_KEY])("toggles with %s", (key) => {
       for (const overlay of ["none", "info"] as const) {
         expect(map({ key }, state(overlay))).toEqual({ type: "toggleMode" });
       }
     });
 
     it.each(["guide", "exitConfirm"] as const)("is ignored with overlay %s", (overlay) => {
-      expect(map({ key: "m" }, state(overlay))).toEqual({ type: "none" });
+      for (const key of ["m", PLAY_PAUSE_KEY]) {
+        expect(map({ key }, state(overlay))).toEqual({ type: "none" });
+      }
+    });
+
+    it("keeps Info and OK showing the lower third", () => {
+      expect(map({ key: "Info" }, state("none"))).toEqual({ type: "showInfo" });
+      expect(map({ key: "Enter" }, state("none"))).toEqual({ type: "showInfo" });
     });
   });
 });

@@ -3,7 +3,7 @@ import "@fontsource/chakra-petch/latin-600.css";
 import "@fontsource/chakra-petch/latin-700.css";
 import "./style.css";
 import { parseCatalog, type Catalog } from "./catalog/catalog";
-import type { Command, UiState } from "./input/commands";
+import { PLAY_PAUSE_KEY, type Command, type UiState } from "./input/commands";
 import { map } from "./input/input-mapper";
 import { systemClock } from "./lib/clock";
 import { watchConnectivity } from "./lib/connectivity";
@@ -164,8 +164,10 @@ async function main(): Promise<void> {
   window.addEventListener("keydown", (event) => {
     const ui: UiState = { overlay: overlays.state().overlay, mode: tuner.mode() };
     const command = map(event, ui);
-    if (command.type === "none") return;
+    // Play/Pause never reaches the media layer, even where it maps to nothing.
+    if (command.type === "none" && event.key !== PLAY_PAUSE_KEY) return;
     event.preventDefault();
+    if (command.type === "none") return;
     dispatch(command);
   });
 
