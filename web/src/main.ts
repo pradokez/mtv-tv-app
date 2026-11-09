@@ -26,6 +26,8 @@ const platform = detectPlatform();
 platform.init();
 
 async function main(): Promise<void> {
+  const releaseScreen = platform.keepScreenOn();
+  window.addEventListener("pagehide", releaseScreen);
   const stage = document.getElementById("stage")!;
   const catalog = await loadCatalog();
   const defaultChannel = catalog.channels()[0];
