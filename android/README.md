@@ -1,12 +1,12 @@
 # Casca Android TV
 
 APK Kotlin com uma Activity em tela cheia e uma única WebView que carrega o app web de
-`app/src/main/assets/web/index.html`. Enquanto a #2 não está integrada, esse arquivo é uma página
-de exemplo que mostra a última tecla recebida.
+`app/src/main/assets/web/index.html`. O versionado é uma página de exemplo que mostra a última
+tecla recebida; o `scripts/install-tv.sh` troca pelo build do app web na hora de compilar o APK e restaura a página de exemplo depois.
 
 ## Trocar a página de exemplo pelo app web
 
-O build do app web (#2) deve ser copiado para **`android/app/src/main/assets/web/`** (com
+O build do app web deve ser copiado para **`android/app/src/main/assets/web/`** (com
 `index.html` na raiz dessa pasta). Basta substituir o conteúdo da pasta e reinstalar.
 
 A casca chama `window.dispatchTvKey(type, key, code, keyCode, androidKeyCode)` a cada tecla
@@ -70,3 +70,9 @@ cd android && ./gradlew test
 ## URL do app hospedado
 
 O build lê o domínio e o caminho base de `config/hosted.json` (versionado). O Gradle chama `web/scripts/hosted-config.ts android-url` e expõe o resultado como `BuildConfig.APP_URL`, a mesma URL usada para gerar o `config.xml` da Tizen. Sem o arquivo, o build falha dizendo o que criar. Ver [`tizen/README.md`](../tizen/README.md#configuração-por-build).
+
+## Publicar e rollback
+
+Os comandos de publicar e de rollback do site estão no [README](../README.md#publicar-o-site).
+
+**Estado atual (até a #64):** a `MainActivity` carrega `assets/web/index.html` de dentro do APK (`START_URL`), então publicar ou fazer rollback não muda nada na TCL. Para atualizar o app, reinstale com `android/scripts/install-tv.sh`. Depois da #64 a casca carrega `BuildConfig.APP_URL` e passa a seguir o site publicado.
