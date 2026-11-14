@@ -54,6 +54,9 @@ export function hostedUrl({ domain, path }: HostedConfig): string {
   return `https://${domain}${path}`;
 }
 
+/** The widget opens this local page, which loads the hosted URL (Tizen has no load-error hook for a remote `content src`). */
+const LAUNCHER_ENTRY = "index.html";
+
 export interface TizenConfigOptions {
   /** `content src` of the widget. */
   contentSrc: string;
@@ -63,7 +66,7 @@ export interface TizenConfigOptions {
 
 export function tizenOptionsFor(config: HostedConfig): TizenConfigOptions {
   return {
-    contentSrc: hostedUrl(config),
+    contentSrc: LAUNCHER_ENTRY,
     accessOrigins: [`https://${config.domain}`, ...YOUTUBE_ORIGINS],
   };
 }
@@ -75,12 +78,15 @@ export function renderTizenConfig(template: string, { contentSrc, accessOrigins 
 }
 
 // CLI: `node hosted-config.ts tizen-config [--test]` prints the config.xml,
+//      `node hosted-config.ts launcher-config` prints the config.js the Tizen launcher reads (the hosted URL),
 //      `node hosted-config.ts android-url` prints the URL for the Android build.
 function main(args: string[]): void {
   const [command, flag] = args;
   try {
     if (command === "android-url") {
       process.stdout.write(hostedUrl(loadHostedConfig()));
+    } else if (command === "launcher-config") {
+      process.stdout.write(`window.MTV_URL = ${JSON.stringify(hostedUrl(loadHostedConfig()))};\n`);
     } else if (command === "tizen-config") {
       const template = readFileSync(TIZEN_TEMPLATE_PATH, "utf8");
       // The test page (--test) is local and needs no hosted address.
@@ -90,7 +96,7 @@ function main(args: string[]): void {
           : tizenOptionsFor(loadHostedConfig());
       process.stdout.write(renderTizenConfig(template, options));
     } else {
-      throw new Error("Uso: hosted-config.ts <tizen-config [--test] | android-url>");
+      throw new Error("Uso: hosted-config.ts <tizen-config [--test] | launcher-config | android-url>");
     }
   } catch (error) {
     process.stderr.write(`${(error as Error).message}\n`);

@@ -55,7 +55,7 @@ describe("hosted URL", () => {
 });
 
 describe("tizen-config CLI (used by build-wgt.sh)", () => {
-  it("prints the config.xml pointing at the hosted URL", () => {
+  it("prints the config.xml that opens the local launcher", () => {
     const { status, stdout } = runCli(["tizen-config"], writeConfig(sample));
     expect(status).toBe(0);
     expect(stdout).toBe(renderTizenConfig(template, tizenOptionsFor(sample)));
@@ -73,6 +73,19 @@ describe("tizen-config CLI (used by build-wgt.sh)", () => {
     expect(status).toBe(0);
     expect(stdout).toContain('<content src="index.html"/>');
     expect(stdout).not.toMatch(/__[A-Z_]+__|origin="\*"/);
+  });
+
+  it("prints the launcher config with the hosted URL, base path included", () => {
+    const { status, stdout } = runCli(["launcher-config"], writeConfig(sample));
+    expect(status).toBe(0);
+    expect(stdout).toBe('window.MTV_URL = "https://meu-usuario.github.io/meu-repo/";\n');
+  });
+
+  it("fails the launcher config with a clear message when the file is missing", () => {
+    const { status, stdout, stderr } = runCli(["launcher-config"], "/nao/existe.json");
+    expect(status).not.toBe(0);
+    expect(stdout).toBe("");
+    expect(stderr).toMatch(/config\/hosted\.json/);
   });
 
   it("rejects an unknown command", () => {
@@ -115,8 +128,9 @@ describe("loadHostedConfig", () => {
 describe("generated Tizen config.xml", () => {
   const xml = renderTizenConfig(template, tizenOptionsFor(sample));
 
-  it("points content src at the hosted URL, base path included", () => {
-    expect(xml).toContain('<content src="https://meu-usuario.github.io/meu-repo/"/>');
+  it("points content src at the local launcher, which opens the hosted URL", () => {
+    expect(xml).toContain('<content src="index.html"/>');
+    expect(xml).not.toContain("meu-repo");
   });
 
   it("restricts access to the hosted domain and YouTube, never *", () => {
