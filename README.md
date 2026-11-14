@@ -14,6 +14,7 @@ App Android TV de uso pessoal que toca canais de videoclipes no estilo da MTV an
 - [Catálogo de canais](#catálogo-de-canais)
 - [Publicar o site](#publicar-o-site)
 - [Contrato com a casca (Android ou Tizen)](#contrato-com-a-casca-android-ou-tizen)
+- [Segredos e dados do ambiente](#segredos-e-dados-do-ambiente)
 - [Privacidade](#privacidade)
 - [Documentação adicional](#documentação-adicional)
 
@@ -94,7 +95,7 @@ Testado em uma TCL C06 (Android 11).
 5. **Compile e instale:**
 
    ```bash
-   android/scripts/install-tv.sh 192.168.0.50      # IP da TV; porta padrão 5555
+   android/scripts/install-tv.sh <ip-da-tv>      # ou TV_IP=<ip-da-tv>; porta padrão 5555
    ```
 
    O script compila o app web com `pnpm build`, empacota o catálogo presente, compila o APK (`./gradlew assembleDebug`), instala com `adb install -r` e abre o app. Os assets temporários são restaurados ao terminar, inclusive se o build falhar.
@@ -201,6 +202,23 @@ O app roda dentro de uma casca: Android (WebView) ou Tizen. Só `web/src/platfor
 - **Teclas:** o app lê só `KeyboardEvent.key`. A casca repassa setas como `ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, OK como `Enter`, Voltar como `Escape`, CH+/CH- como `ChannelUp`/`ChannelDown`, Menu como `ContextMenu`, a tecla amarela como `ColorF2Yellow` e Info como `Info`.
 - **Empacotamento:** a casca carrega `assets/web/index.html`. O conteúdo de `web/dist/` deve chegar a `android/app/src/main/assets/web/` no build do APK (de preferência por uma task Gradle, sem commitar o build).
 - **WebView:** JavaScript e DOM storage ligados, e `mediaPlaybackRequiresUserGesture = false`, para o autoplay com som funcionar.
+
+## Segredos e dados do ambiente
+
+O repositório é público. **Chave de API, IP, serial, token e qualquer dado do ambiente vivem em variável de ambiente ou em arquivo local ignorado pelo git, nunca no git.**
+
+| Dado | Onde vive |
+| --- | --- |
+| `YOUTUBE_API_KEY` | Variável de ambiente |
+| `TV_IP` (ou o argumento dos `install-tv.sh`; sem IP padrão) | Variável de ambiente ou argumento |
+| `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PAGES_PROJECT` | Ambiente ou `web/.publish.local` (ignorado) |
+| SDK do Android | `android/local.properties` (ignorado) |
+
+[`.env.example`](.env.example) lista as variáveis, sem valores. Nos docs e exemplos, o IP da TV é sempre `<ip-da-tv>`. O `.gitignore` cobre `.env*` (menos o exemplo), chaves e certificados, e `web/scripts/repo-hygiene.test.ts` (parte do `pnpm test`) falha se um arquivo versionado tiver IP privado (`192.168.*`, `10.*`, `172.16-31.*`), chave de API conhecida (`AIza…`, `ghp_…`, `cfut_…`) ou chave privada.
+
+**GitGuardian:** o alerta da PR #73 apontou dois tokens de fixture (`Xk3_9-…`, em `guards.test.ts` e `test-helpers.ts`), valores inventados para testar a validação do token de publicação: falso positivo, nada a rotacionar.
+
+**Histórico:** auditoria de `main` e do histórico (121 arquivos): sem chave, token, certificado ou `.env`. Só há dois IPs privados de rede local (em docs e scripts já removidos), de risco baixo e inúteis fora da rede da casa. Decisão: **manter o histórico** (reescrevê-lo quebraria PRs e SHAs usados nas imagens do `docs/` e não elimina nada sensível). Se uma credencial real vazar um dia, ela deve ser rotacionada, não só apagada.
 
 ## Privacidade
 
