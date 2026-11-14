@@ -1,7 +1,9 @@
 # Casca Android TV
 
-APK Kotlin com uma Activity em tela cheia e uma única WebView que carrega o app web de
-`app/src/main/assets/web/index.html`. O versionado é uma página de exemplo que mostra a última
+APK Kotlin com uma Activity em tela cheia e uma única WebView. A página é sempre
+`https://appassets.androidplatform.net/app/index.html` (origem local da WebView), servida do pacote
+web baixado do site publicado (ver [Atualização do app web](#atualização-do-app-web)) ou, sem ele, de
+`app/src/main/assets/web/index.html`, a reserva embutida no APK. O versionado é uma página de exemplo que mostra a última
 tecla recebida; o `scripts/install-tv.sh` troca pelo build do app web na hora de compilar o APK e restaura a página de exemplo depois.
 
 ## Trocar a página de exemplo pelo app web
@@ -75,4 +77,15 @@ O build lê o domínio e o caminho base de `config/hosted.json` (versionado). O 
 
 Os comandos de publicar e de rollback do site estão no [README](../README.md#publicar-o-site).
 
-**Estado atual (até a #64):** a `MainActivity` carrega `assets/web/index.html` de dentro do APK (`START_URL`), então publicar ou fazer rollback não muda nada na TCL. Para atualizar o app, reinstale com `android/scripts/install-tv.sh`. Depois da #64 a casca carrega `BuildConfig.APP_URL` e passa a seguir o site publicado.
+Publicar (`pnpm publish:site`) atualiza a TCL na abertura seguinte do app, sem reinstalar o APK. Ver abaixo.
+
+## Atualização do app web
+
+A casca não abre a URL hospedada: o YouTube embutido mostra anúncios quando a página vem de `github.io` e não mostra na origem local da WebView (#91). Por isso ela **baixa** o site publicado e o serve pela origem local `appassets.androidplatform.net`, que também preserva o localStorage (favoritos, modo, último canal).
+
+- A publicação grava `manifest.json` ao lado do site: `version` (a tag `site-AAAAMMDD-HHMMSS`), `minShell` e, por arquivo, `path`, `sha256` e `size`.
+- Ao abrir o app e ao voltar ao primeiro plano (no máximo 1 checagem por hora), a casca lê `${APP_URL}manifest.json` em segundo plano. Qualquer versão **diferente** da atual conta como atualização, então `pnpm publish:rollback` também chega às TVs.
+- Os arquivos são baixados para uma pasta temporária, conferidos (sha256 e tamanho) e só então viram a versão atual (`filesDir/web/<versão>/`, ponteiro `filesDir/web/current`). Qualquer falha mantém a versão atual. Ficam a atual e a anterior; arquivos iguais aos da versão atual são copiados em vez de baixados.
+- A versão nova só é aplicada na próxima abertura ou ao voltar ao primeiro plano, nunca no meio de um vídeo.
+- Se `minShell` for maior que o `versionCode` da casca, a atualização é ignorada. Suba `MIN_SHELL` (`web/scripts/publish/manifest.ts`) quando o web passar a exigir algo novo da casca; só então é preciso reinstalar o APK (`android/scripts/install-tv.sh`).
+- Os assets embutidos em `assets/web/` são a reserva: valem na primeira abertura sem rede e se o pacote baixado sumir.
