@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Sem script nem recurso externo: o aviso aparece justamente quando a rede falhou. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'" />
+    <title>MTV TV</title>
+    <!-- Aviso local da casca Android quando o app hospedado não carrega. A MainActivity troca {{texto}}
+         pelo texto do momento e trata Voltar e OK (Sair) por conta própria: esta página não usa a ponte
+         MtvTv. Mesma identidade do lançador da Tizen (tizen/launcher/index.html), em vw porque a WebView
+         da TCL tem ~961 px de largura. -->
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0a090c; }
+      body {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        box-sizing: border-box; padding: 5%; text-align: center; color: #c0aac0;
+        font-family: "Chakra Petch", "Helvetica Neue", Arial, sans-serif; font-weight: 500;
+        background: radial-gradient(ellipse at 50% 40%, #1d1a22, #0a090c 70%);
+      }
+      .marca {
+        padding: .3vw 2.1vw; background: #cb1c6a; color: #fff; font-size: 4.6vw; font-weight: 700; letter-spacing: .16em;
+        clip-path: polygon(0 0, calc(100% - 1.5vw) 0, 100% 1.5vw, 100% 100%, 1.5vw 100%, 0 calc(100% - 1.5vw));
+      }
+      #aviso { margin-top: 2.9vw; }
+      #texto { margin: 0; font-size: 3.1vw; }
+      #dica { margin: 1vw 0 0; font-size: 1.7vw; color: rgba(255, 255, 255, .55); }
+      #sair {
+        margin-top: 2.5vw; padding: 0 2.5vw; height: 5vw; border: 0; background: #f1f028; color: #0a090c;
+        font: 700 2.5vw/5vw "Chakra Petch", "Helvetica Neue", Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase;
+        clip-path: polygon(0 0, calc(100% - 1.25vw) 0, 100% 1.25vw, 100% 100%, 1.25vw 100%, 0 calc(100% - 1.25vw));
+      }
+      #sair:focus { outline: none; }
+    </style>
+  </head>
+  <body>
+    <div class="marca">MTV TV</div>
+    <div id="aviso" role="alert">
+      <p id="texto">{{texto}}</p>
+      <p id="dica">Tentando de novo automaticamente…</p>
+      <button id="sair" type="button" tabindex="-1">Sair</button>
+    </div>
+  </body>
+</html>
