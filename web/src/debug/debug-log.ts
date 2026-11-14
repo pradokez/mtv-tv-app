@@ -35,6 +35,9 @@ export function installDebugOverlay(win: Window, info: Record<string, string>): 
   sink(`ua ${win.navigator.userAgent.replace(/^.*AppleWebKit\/[\d.]+ \(KHTML, like Gecko\) /, "")}`);
   sink(`tizen ${typeof (win as unknown as { tizen?: unknown }).tizen}, referrer "${doc.referrer}"`);
 
+  // The Tizen API may be injected after the page starts: look again.
+  win.setTimeout(() => sink?.(`tizen depois de 3s: ${typeof (win as unknown as { tizen?: unknown }).tizen}`), 3000);
+
   win.addEventListener("error", (e) => sink?.(`erro ${e.message} (${e.filename.split("/").pop()}:${e.lineno})`));
   win.addEventListener("unhandledrejection", (e) => sink?.(`rejeição ${String(e.reason)}`));
   doc.addEventListener("securitypolicyviolation", (e) => sink?.(`CSP ${e.violatedDirective} ${e.blockedURI}`));

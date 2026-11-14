@@ -7,6 +7,7 @@ function fakeWindow(search: string) {
     location: { search, origin: "https://exemplo.test" },
     navigator: { userAgent: "UA" },
     addEventListener: () => {},
+    setTimeout: () => 0,
     document: {
       referrer: "",
       body: { append: () => {} },

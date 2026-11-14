@@ -108,6 +108,19 @@ describe("YouTube player: autoplay fallback", () => {
     expect(yt.muted).toBe(false);
   });
 
+  it("mutes when a clip that was buffering falls back to unstarted (seen on the Samsung TV)", async () => {
+    const { player, yt, advance } = await setup();
+    player.load("a", 0);
+    yt.state = 3;
+    yt.options.events.onStateChange({ data: 3 });
+    advance(1500);
+    expect(yt.muted).toBe(false);
+    yt.state = UNSTARTED;
+    yt.options.events.onStateChange({ data: UNSTARTED });
+    advance(1500);
+    expect(yt.muted).toBe(true);
+  });
+
   it("never mutes where autoplay is known to be allowed, as in the Android shell", async () => {
     const { player, yt, advance } = await setup(true);
     player.load("a", 0);

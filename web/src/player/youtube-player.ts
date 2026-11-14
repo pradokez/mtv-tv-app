@@ -84,7 +84,12 @@ export function createYouTubePlayer(
     debugLog(`carregando ${videoId}`);
     player.loadVideoById({ videoId, startSeconds: startSec });
     player.setPlaybackQuality?.("hd720");
+    scheduleAutoplayCheck();
+  };
+
+  const scheduleAutoplayCheck = () => {
     if (autoplayCheck !== undefined) clock.clearTimeout(autoplayCheck);
+    autoplayCheck = undefined;
     if (!muted && !autoplayKnownOk) autoplayCheck = clock.setTimeout(checkAutoplay, AUTOPLAY_CHECK_MS);
   };
 
@@ -154,6 +159,9 @@ export function createYouTubePlayer(
         onStateChange: ({ data }) => {
           debugLog(`estado ${data}`);
           if (data === State.PLAYING && !muted) autoplayKnownOk = true;
+          // The Samsung TV buffers the clip and then drops back to unstarted
+          // when it refuses autoplay with sound: check again.
+          if (data === State.UNSTARTED) scheduleAutoplayCheck();
           if (data === State.ENDED && currentVideoId) ended.emit(currentVideoId);
         },
         onError: ({ data }) => {
