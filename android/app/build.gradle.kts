@@ -5,9 +5,16 @@ plugins {
 
 // A URL do app hospedado vem de config/hosted.local.json (fora do git), pelo mesmo
 // módulo que gera o config.xml da Tizen. Falha o build com a mensagem dele se faltar.
-val appUrl: String = providers.exec {
+// isIgnoreExitValue: sem ele o Gradle só diz "exit value 1" e engole o stderr do script.
+val hostedConfig = providers.exec {
     commandLine("node", "${rootDir.parentFile}/web/scripts/hosted-config.ts", "android-url")
-}.standardOutput.asText.get().trim()
+    isIgnoreExitValue = true
+}
+val appUrl: String = if (hostedConfig.result.get().exitValue == 0) {
+    hostedConfig.standardOutput.asText.get().trim()
+} else {
+    throw GradleException(hostedConfig.standardError.asText.get().trim())
+}
 
 android {
     namespace = "app.mtvtv"
