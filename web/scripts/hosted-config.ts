@@ -1,9 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-// Build-time config: the hosted app's domain lives in the versioned config/hosted.json
-// (the site is public, so the address is no secret). From it we derive the Tizen
-// config.xml and hand the same URL to the Android build.
+// Build-time config: the hosted app's domain and base path live in the versioned
+// config/hosted.json (the site is public, so the address is no secret). GitHub Pages serves
+// a repository under https://<user>.github.io/<repo>/, hence the path.
+// From it we derive the Tizen config.xml and hand the same URL to the Android build.
 
 export const CONFIG_PATH =
   process.env.HOSTED_CONFIG_PATH ?? fileURLToPath(new URL("../../config/hosted.json", import.meta.url));
@@ -19,30 +20,38 @@ const YOUTUBE_ORIGINS = [
 
 export interface HostedConfig {
   domain: string;
+  /** Base path of the app on the domain: starts and ends with "/" (e.g. "/mtv-tv-app/"). */
+  path: string;
 }
 
-export function loadHostedConfig(path: string = CONFIG_PATH): HostedConfig {
-  if (!existsSync(path)) {
+// "/" or "/segment/segment/": plain URL-safe segments, so no "..", no encoding tricks.
+const BASE_PATH = /^\/([A-Za-z0-9_~-][A-Za-z0-9._~-]*\/)*$/;
+
+export function loadHostedConfig(file: string = CONFIG_PATH): HostedConfig {
+  if (!existsSync(file)) {
     throw new Error(
-      `Configuração não encontrada: ${path}\n` +
-        `Crie config/hosted.json com {"domain": "meu-app.pages.dev"} (só o domínio do app hospedado).`,
+      `Configuração não encontrada: ${file}\n` +
+        `Crie config/hosted.json com {"domain": "meu-usuario.github.io", "path": "/meu-repo/"}.`,
     );
   }
   let raw: unknown;
   try {
-    raw = JSON.parse(readFileSync(path, "utf8"));
+    raw = JSON.parse(readFileSync(file, "utf8"));
   } catch {
-    throw new Error(`${path} não é um JSON válido.`);
+    throw new Error(`${file} não é um JSON válido.`);
   }
-  const { domain } = (raw ?? {}) as Partial<HostedConfig>;
+  const { domain, path } = (raw ?? {}) as Partial<HostedConfig>;
   if (typeof domain !== "string" || !/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(domain)) {
-    throw new Error(`${path}: "domain" deve ser só o domínio, sem https:// nem barras (ex.: meu-app.pages.dev).`);
+    throw new Error(`${file}: "domain" deve ser só o domínio, sem https:// nem barras (ex.: meu-app.pages.dev).`);
   }
-  return { domain };
+  if (typeof path !== "string" || !BASE_PATH.test(path)) {
+    throw new Error(`${file}: "path" deve começar e terminar com "/" (ex.: "/mtv-tv-app/", ou "/" na raiz do domínio).`);
+  }
+  return { domain, path };
 }
 
-export function hostedUrl({ domain }: HostedConfig): string {
-  return `https://${domain}/`;
+export function hostedUrl({ domain, path }: HostedConfig): string {
+  return `https://${domain}${path}`;
 }
 
 export interface TizenConfigOptions {
