@@ -84,8 +84,7 @@ Com o app servido por http (testado a partir do Mac), o 153 some, o que confirma
 
 ## Configuração por build
 
-A URL do app hospedado (domínio + token) nunca vai para o git. Ela vive em `config/hosted.local.json` (ignorado); copie `config/hosted.example.json` e preencha `domain` (só o domínio, ex.: `meu-app.pages.dev`) e `token`. A URL é `https://<domain>/<token>/`.
+O domínio do app hospedado vive em `config/hosted.json` (versionado: o site é público, o endereço não é segredo). Ele tem só `domain` (só o domínio, ex.: `meu-app.pages.dev`). A URL é `https://<domain>/`.
 
-- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com a URL e `<access>` só para o domínio hospedado e o YouTube (nada de `*`). Sem o arquivo local, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
+- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com a URL e `<access>` só para o domínio hospedado e o YouTube (nada de `*`). Sem o arquivo, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
 - A Android lê a mesma URL no build como `BuildConfig.APP_URL`.
-- `web/scripts/hosted-config.test.ts` falha se o domínio ou o token aparecerem em qualquer arquivo versionado.

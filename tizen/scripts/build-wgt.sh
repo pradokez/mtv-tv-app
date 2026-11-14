@@ -27,7 +27,7 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp -R "$SRC/." "$STAGE/"
 cp "$TIZEN_DIR/icon.png" "$STAGE/"
-# config.xml sai do modelo + config/hosted.local.json (URL secreta fora do git); falha se faltar o arquivo.
+# config.xml sai do modelo + config/hosted.json (versionado); falha se faltar o arquivo.
 node "$REPO_DIR/web/scripts/hosted-config.ts" tizen-config $CONFIG_FLAG > "$STAGE/config.xml"
 
 OUT="$TIZEN_DIR/build"

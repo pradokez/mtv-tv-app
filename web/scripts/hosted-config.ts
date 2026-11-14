@@ -1,13 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-// Build-time config: the hosted app's address (domain + secret token) lives only in
-// a local, git-ignored file. From it we derive the Tizen config.xml and hand the same
-// URL to the Android build. The URL must never be committed (see hosted-config.test.ts).
+// Build-time config: the hosted app's domain lives in the versioned config/hosted.json
+// (the site is public, so the address is no secret). From it we derive the Tizen
+// config.xml and hand the same URL to the Android build.
 
-export const LOCAL_CONFIG_PATH =
-  process.env.HOSTED_CONFIG_PATH ?? fileURLToPath(new URL("../../config/hosted.local.json", import.meta.url));
-export const EXAMPLE_CONFIG_PATH = fileURLToPath(new URL("../../config/hosted.example.json", import.meta.url));
+export const CONFIG_PATH =
+  process.env.HOSTED_CONFIG_PATH ?? fileURLToPath(new URL("../../config/hosted.json", import.meta.url));
 const TIZEN_TEMPLATE_PATH = fileURLToPath(new URL("../../tizen/config.template.xml", import.meta.url));
 
 // The only other origins the shells may reach: the YouTube player and its assets.
@@ -20,14 +19,13 @@ const YOUTUBE_ORIGINS = [
 
 export interface HostedConfig {
   domain: string;
-  token: string;
 }
 
-export function loadHostedConfig(path: string = LOCAL_CONFIG_PATH): HostedConfig {
+export function loadHostedConfig(path: string = CONFIG_PATH): HostedConfig {
   if (!existsSync(path)) {
     throw new Error(
-      `Configuração local não encontrada: ${path}\n` +
-        `Copie config/hosted.example.json para config/hosted.local.json e preencha o domínio e o token.`,
+      `Configuração não encontrada: ${path}\n` +
+        `Crie config/hosted.json com {"domain": "meu-app.pages.dev"} (só o domínio do app hospedado).`,
     );
   }
   let raw: unknown;
@@ -36,18 +34,15 @@ export function loadHostedConfig(path: string = LOCAL_CONFIG_PATH): HostedConfig
   } catch {
     throw new Error(`${path} não é um JSON válido.`);
   }
-  const { domain, token } = (raw ?? {}) as Partial<HostedConfig>;
+  const { domain } = (raw ?? {}) as Partial<HostedConfig>;
   if (typeof domain !== "string" || !/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(domain)) {
     throw new Error(`${path}: "domain" deve ser só o domínio, sem https:// nem barras (ex.: meu-app.pages.dev).`);
   }
-  if (typeof token !== "string" || !/^[A-Za-z0-9._~-]+$/.test(token)) {
-    throw new Error(`${path}: "token" deve ter só letras, números, ".", "_", "~" ou "-".`);
-  }
-  return { domain, token };
+  return { domain };
 }
 
-export function hostedUrl({ domain, token }: HostedConfig): string {
-  return `https://${domain}/${token}/`;
+export function hostedUrl({ domain }: HostedConfig): string {
+  return `https://${domain}/`;
 }
 
 export interface TizenConfigOptions {

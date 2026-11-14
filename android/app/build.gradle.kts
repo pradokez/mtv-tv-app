@@ -3,7 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// A URL do app hospedado vem de config/hosted.local.json (fora do git), pelo mesmo
+// A URL do app hospedado vem de config/hosted.json (versionado), pelo mesmo
 // módulo que gera o config.xml da Tizen. Falha o build com a mensagem dele se faltar.
 // isIgnoreExitValue: sem ele o Gradle só diz "exit value 1" e engole o stderr do script.
 val hostedConfig = providers.exec {
