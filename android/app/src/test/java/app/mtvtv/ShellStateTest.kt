@@ -1,5 +1,6 @@
 package app.mtvtv
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -86,6 +87,15 @@ class ShellStateTest {
         assertEquals("Sem conexão com a internet", Notice.text(online = false))
         assertEquals("Não foi possível abrir o MTV TV", Notice.text(online = true))
         assertEquals("<p>Sem conexão com a internet</p>", Notice.render("<p>{{texto}}</p>", online = false))
+    }
+
+    @Test
+    fun oAssetDoAvisoTemAMarcaESemScript() {
+        // Testes JVM do Gradle rodam com o diretório do módulo (android/app) como diretório atual.
+        val html = File("src/main/assets/aviso.html").readText()
+        assertEquals(1, html.split(Notice.PLACEHOLDER).size - 1)
+        assertFalse(html.contains("<script", ignoreCase = true))
+        assertTrue(html.contains("default-src 'none'"))
     }
 
     @Test

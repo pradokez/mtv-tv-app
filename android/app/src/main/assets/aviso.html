@@ -6,8 +6,8 @@
     <!-- Sem script nem recurso externo: o aviso aparece justamente quando a rede falhou. -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'" />
     <title>MTV TV</title>
-    <!-- Aviso local da casca Android quando o app hospedado não carrega. A MainActivity troca {{texto}}
-         pelo texto do momento e trata Voltar e OK (Sair) por conta própria: esta página não usa a ponte
+    <!-- Aviso local da casca Android quando o app hospedado não carrega. A MainActivity troca a marca de
+         #texto (Notice.PLACEHOLDER, que só pode aparecer ali) pelo texto do momento e trata Voltar e OK (Sair) por conta própria: esta página não usa a ponte
          MtvTv. Mesma identidade do lançador da Tizen (tizen/launcher/index.html), em vw porque a WebView
          da TCL tem ~961 px de largura. -->
     <style>
