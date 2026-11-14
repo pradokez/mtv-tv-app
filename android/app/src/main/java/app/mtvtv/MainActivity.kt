@@ -221,7 +221,8 @@ class MainActivity : Activity() {
             val ok = probe(url)
             handler.post {
                 probing = false
-                if (isDestroyed || !shell.noticeVisible) return@post
+                // Pausada no meio da sondagem: onResume sonda de novo.
+                if (isDestroyed || !resumed || !shell.noticeVisible) return@post
                 if (ok) {
                     loadApp()
                 } else {
