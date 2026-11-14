@@ -214,7 +214,7 @@ pnpm publish:rollback <tag>  # volta para uma publicação anterior (tags em pub
 
 O app roda dentro de uma casca: Android (WebView) ou Tizen. Só `web/src/platform/platform.ts` conhece a casca: ele detecta a plataforma (`window.MtvTv` na Android, `tizen` na Tizen, senão navegador) e expõe `kind`, `exitApp()` e `autoplayAllowed`. O resto do app consome essa interface. Na Tizen a detecção já existe, com autoplay permitido; a saída real e o registro de teclas ficam para outras issues.
 
-- **Build:** `pnpm build` gera `web/dist/` (`index.html`, `assets/`, `catalog.json`), com caminhos relativos.
+- **Build:** as cascas abrem o `pnpm build:tizen` (`web/dist-tizen/`: `index.html`, `assets/`, `catalog.json`, com caminhos relativos), que é o que o `pnpm publish:site` publica.
 - **Origem:** as duas cascas abrem o site publicado no GitHub Pages (`https://<domínio><caminho>`, de `config/hosted.json`), nunca `file://`. O app carrega o catálogo com `fetch`, que não funciona em `file://`, e o player do YouTube exige uma origem HTTP(S). Na Android, a WebView só navega para o app hospedado e o YouTube, e `MtvTv.exitApp()` só vale com o app hospedado na página principal (ver [`android/README.md`](android/README.md#política-de-origem)).
 - **Teclas:** o app lê só `KeyboardEvent.key`. A casca repassa setas como `ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, OK como `Enter`, Voltar como `Escape`, CH+/CH- como `ChannelUp`/`ChannelDown`, Menu como `ContextMenu`, a tecla amarela como `ColorF2Yellow` e Info como `Info`.
 - **Empacotamento:** nenhuma casca empacota o app web. O APK só tem a casca e a tela de aviso local (`android/app/src/main/assets/aviso.html`).

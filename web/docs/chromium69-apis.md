@@ -4,7 +4,7 @@ A Samsung Q80 (Tizen 5.5) roda **Chromium 69** (medido na TV, ver [`tizen/README
 
 ## Como o build da Tizen trata
 
-- `pnpm build:tizen` roda `vite build --mode tizen`: `build.target` e `build.cssTarget` em `chrome69`, saída em `web/dist-tizen/`. O `pnpm build` (web e Android) não muda.
+- `pnpm build:tizen` roda `vite build --mode tizen`: `build.target` e `build.cssTarget` em `chrome69`, saída em `web/dist-tizen/`. É o build que o `pnpm publish:site` publica e que as duas TVs abrem; o `pnpm build` (`web/dist/`) não muda e serve só para desenvolvimento.
 - Em seguida, [`scripts/check-bundle.ts`](../scripts/check-bundle.ts) confere o `dist-tizen/` e falha o build se sobrar sintaxe acima do alvo. JS: parse como ES2020 e reprova `?.`, `??` e BigInt; o que for mais novo (class fields, `??=` etc.) nem passa no parse. CSS: reprova `inset`, `aspect-ratio`, `:is()`, `:where()`, `:has()` e `@layer`.
 - O verificador olha só sintaxe. APIs de runtime (métodos e objetos do navegador) passam pelo levantamento abaixo e por polyfill quando faltam.
 

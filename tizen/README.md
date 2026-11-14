@@ -19,7 +19,7 @@ tizen/scripts/build-wgt.sh --app    # lançador + URL de config/hosted.json (sem
 tizen/scripts/install-tv.sh         # informe o IP: install-tv.sh <ip-da-tv> ou TV_IP=<ip-da-tv>
 ```
 
-O `--app` não empacota mais o app: ele vem da URL hospedada, então atualizar o app não exige reinstalar o `.wgt`. O `pnpm build:tizen` (usado só para checar a compatibilidade com o Chromium 69) mantém esse build (`vite build --mode tizen`) converte JS e CSS para `chrome69`, o Chromium da Q80 (ver [Chromium da Q80](#chromium-da-q80)), e grava em `web/dist-tizen/`, que não entra no pacote; o `pnpm build` normal (web e Android) continua igual em `web/dist/`.
+O `--app` não empacota mais o app: ele vem da URL hospedada, então atualizar o app não exige reinstalar o `.wgt`. O `pnpm build:tizen` (`vite build --mode tizen`) converte JS e CSS para `chrome69`, o Chromium da Q80 (ver [Chromium da Q80](#chromium-da-q80)), e grava em `web/dist-tizen/`, que não entra no pacote: é o build que o `pnpm publish:site` publica no GitHub Pages e que as duas TVs (Samsung e TCL) abrem. O `pnpm build` normal grava em `web/dist/` e serve só para desenvolvimento.
 
 Depois do build, `web/scripts/check-bundle.ts` confere o `dist-tizen/` e falha o build (e o `--app`) se sobrar sintaxe acima do Chromium 69: `?.`, `??`, BigInt ou qualquer coisa além do ES2020 no JS, e `inset`, `aspect-ratio`, `:is()`, `:where()`, `:has()` ou `@layer` no CSS. Para conferir outro build à mão: `cd web && node scripts/check-bundle.ts dist`. O que a conversão não resolve (gap em flex, `backdrop-filter`) está em [`web/docs/chromium69-apis.md`](../web/docs/chromium69-apis.md).
 
