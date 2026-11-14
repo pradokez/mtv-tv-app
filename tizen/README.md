@@ -94,6 +94,19 @@ Medido na TV real em 2026-11-08, com o app completo. Para ler o console sem `sdb
 
 Com o app servido por http (testado a partir do Mac), o 153 some, o que confirma a causa.
 
+## Primeiro boot pela URL hospedada (issue #67)
+
+Medido na Q80 real em 2026-11-14, com o `.wgt` do `build-wgt.sh --app` (lançador que abre `https://pradokez.github.io/mtv-tv-app/`), instalado por `install-tv.sh 192.168.0.13` sobre o app antigo (mesmo id), depois de confirmar com o dono.
+
+| Passo | Observado |
+| --- | --- |
+| Build `--app`, instalação e `tizen run` | Sem erro; pacote de 11 KB, assinado com o perfil `mtvtv` |
+| Site hospedado | HTTP 200 (conferido do Mac antes de instalar) |
+| App na TV | Passa do lançador e mostra a interface do app (sem tela branca nem aviso de falha) |
+| Vídeo | **Área do vídeo preta; nenhum canal tocou.** O erro 153 não apareceu, mas também não houve reprodução |
+
+Resultado: os critérios "abre pela URL hospedada" e "sem tela branca" passaram; "sem erro 153" não foi confirmado (o player não mostrou mensagem) e "um canal toca sozinho" **falhou**. Não há console na Q80 (`sdb shell` bloqueado), então a causa ainda não é conhecida: o diagnóstico do player continua na #47. Hipóteses a testar lá: o `platform.ts` não detectar `tizen` na página https (cairia no autoplay mudo, não no preto), o autoplay do Chromium 69 e o `Referer`/CSP no iframe. O beacon de [Primeiro boot na Q80](#primeiro-boot-na-q80-issue-50) não serve com o app hospedado sem liberar `img-src` para o Mac no CSP.
+
 ## Configuração por build
 
 O endereço do app hospedado vive em `config/hosted.json` (versionado: o site é público, o endereço não é segredo). Ele tem `domain` (só o domínio, ex.: `meu-usuario.github.io`) e `path` (o caminho base, começa e termina com `/`, ex.: `/mtv-tv-app/`; `/` se o app estiver na raiz do domínio). O GitHub Pages serve um repositório em `https://<usuário>.github.io/<repo>/`, por isso o caminho. A URL é `https://<domain><path>`.
