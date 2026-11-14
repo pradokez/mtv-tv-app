@@ -100,4 +100,24 @@ describe("app bundle", () => {
   it("passes for the tizen build", async () => {
     expect(await violations("tizen")).toEqual({ js: [], css: [] });
   });
+
+  /** The built `index.html`, in memory. */
+  async function indexHtml(mode: string): Promise<string> {
+    const result = (await build({ root, mode, logLevel: "silent", build: { write: false } })) as Rollup.RollupOutput;
+    const html = result.output.find((file) => file.fileName === "index.html");
+    return html?.type === "asset" ? String(html.source) : "";
+  }
+
+  it("loads the tizen build as a classic script, which file:// on the Q80 requires", async () => {
+    const html = await indexHtml("tizen");
+
+    expect(html).toMatch(/<script defer src="\.\/assets\/[^"]+\.js"><\/script>/);
+    expect(html).toMatch(/<link rel="stylesheet" href="\.\/assets\/[^"]+\.css">/);
+    expect(html).not.toContain('type="module"');
+    expect(html).not.toContain("crossorigin");
+  });
+
+  it("keeps the module script in the default build", async () => {
+    expect(await indexHtml("production")).toContain('<script type="module" crossorigin');
+  });
 });

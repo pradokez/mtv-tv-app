@@ -35,17 +35,41 @@ function catalogFallback(): Plugin {
  */
 const TIZEN_TARGET = "chrome69";
 
+/**
+ * On the Q80 the app runs from `file://`, where Chromium 69 refuses
+ * `<script type="module" crossorigin>` (CORS) and the screen stays blank. In
+ * tizen mode the bundle is an IIFE and the tag becomes a plain deferred script.
+ */
+function classicScript(): Plugin {
+  return {
+    name: "tizen-classic-script",
+    transformIndexHtml: {
+      order: "post",
+      handler: (html) =>
+        html
+          .replace(/<script type="module" crossorigin src=/g, "<script defer src=")
+          .replace(/(<link rel="stylesheet") crossorigin /g, "$1 "),
+    },
+  };
+}
+
 // `base: "./"` keeps asset paths relative so the build works when the
 // Android shell serves `web/dist/` through WebViewAssetLoader.
 export default defineConfig(({ mode }) => {
   const tizen = mode === "tizen";
   return {
     base: "./",
-    plugins: [catalogFallback()],
+    plugins: [catalogFallback(), ...(tizen ? [classicScript()] : [])],
     build: {
       outDir: tizen ? "dist-tizen" : "dist",
       emptyOutDir: true,
-      ...(tizen && { target: TIZEN_TARGET, cssTarget: TIZEN_TARGET }),
+      ...(tizen && {
+        target: TIZEN_TARGET,
+        cssTarget: TIZEN_TARGET,
+        modulePreload: false,
+        cssCodeSplit: false,
+        rolldownOptions: { output: { format: "iife" as const } },
+      }),
     },
     test: {
       environment: "node",

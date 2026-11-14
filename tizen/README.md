@@ -68,3 +68,16 @@ Mozilla/5.0 (SMART-TV; LINUX; Tizen 5.5) AppleWebKit/537.36 (KHTML, like Gecko) 
 ```
 
 Isso confirma o alvo `chrome69` previsto no PRD #40 para o build do app.
+
+## Primeiro boot na Q80 (issue #50)
+
+Medido na TV real em 2026-11-08, com o app completo. Para ler o console sem `sdb shell`, usei um pacote temporário (não commitado) com um script que mandava `onerror`/`console.error` por `new Image().src = "http://<ip-do-mac>:8099/log?..."` a um servidor no Mac; o CSP do app precisa de `img-src` para esse host, e o `config.xml` de `<access>` (abaixo).
+
+| Achado | Efeito na TV | Decisão |
+| --- | --- | --- |
+| `<script type="module" crossorigin>` em `file://` | Tela branca: o Chromium 69 recusa o módulo (CORS) e o app nunca roda | `vite build --mode tizen` gera IIFE e o HTML sai com `<script defer>` (sem `crossorigin`); o CSS vai num só arquivo |
+| Sem `<access origin>` no `config.xml` | Qualquer requisição fora do pacote (inclusive o YouTube) é bloqueada | `<access origin="*" subdomains="true"/>` |
+| `fetch`/XHR de `catalog.json` | Funciona em `file://` depois do `<access>`; o catálogo real (12 MB, ~106 mil vídeos) carrega | nenhuma |
+| iframe do YouTube em `file://` | **Erro 153** (configuração do player) em todo vídeo: o iframe depende do `Referer` da página e `file://` não tem; `origin` e `widget_referrer` https passados nos `playerVars` não resolvem | **Em aberto**: precisa de uma origem http(s) (ver a issue de acompanhamento) |
+
+Com o app servido por http (testado a partir do Mac), o 153 some, o que confirma a causa.
