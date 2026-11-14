@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MTV TV</title>
+    <!-- Lançador local da casca Tizen: abre a URL hospedada (config.js, gerado no build) e, se ela não
+         carregar, mostra o aviso e tenta de novo. Sintaxe ES5 e CSS simples: roda no Chromium 69 da Q80. -->
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0a090c; }
+      body {
+        display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+        -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+        box-sizing: border-box; padding: 5%; text-align: center; color: #c0aac0;
+        font-family: "Chakra Petch", "Helvetica Neue", Arial, sans-serif; font-weight: 500;
+        background: radial-gradient(ellipse at 50% 40%, #1d1a22, #0a090c 70%);
+      }
+      .marca {
+        padding: 6px 40px; background: #cb1c6a; color: #fff; font-size: 88px; font-weight: 700; letter-spacing: .16em;
+        -webkit-clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 28px 100%, 0 calc(100% - 28px));
+        clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 28px 100%, 0 calc(100% - 28px));
+      }
+      #aviso { display: none; margin-top: 56px; }
+      .falhou #aviso { display: block; }
+      #texto { margin: 0; font-size: 60px; }
+      #dica { margin: 20px 0 0; font-size: 32px; color: rgba(255, 255, 255, .55); }
+      #sair {
+        margin-top: 48px; padding: 0 48px; height: 96px; border: 0; background: #f1f028; color: #0a090c;
+        font: 700 48px/96px "Chakra Petch", "Helvetica Neue", Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase;
+        -webkit-clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+        clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+      }
+      #sair:focus { outline: none; }
+    </style>
+  </head>
+  <body>
+    <div class="marca">MTV TV</div>
+    <div id="aviso" role="alert">
+      <p id="texto">Sem conexão com a internet</p>
+      <p id="dica">Tentando de novo automaticamente…</p>
+      <button id="sair" type="button">Sair</button>
+    </div>
+    <script src="config.js"></script>
+    <script>
+      (function () {
+        var TIMEOUT_MS = 8000;
+        var RETRY_MS = 10000;
+        var url = window.MTV_URL;
+        var body = document.body;
+        var sair = document.getElementById("sair");
+        var texto = document.getElementById("texto");
+        var timer = null;
+        var tentando = false;
+        var screenHeld = false;
+
+        function tizenApi() { return window.tizen; }
+
+        function exitApp() {
+          try { tizenApi().application.getCurrentApplication().exit(); } catch (e) { /* fora da TV */ }
+        }
+
+        function holdScreen(hold) {
+          if (hold === screenHeld) return;
+          screenHeld = hold;
+          try {
+            if (hold) tizenApi().power.request("SCREEN", "SCREEN_NORMAL");
+            else tizenApi().power.release("SCREEN");
+          } catch (e) { /* sem o privilégio ou fora da TV */ }
+        }
+
+        function mostrarAviso() {
+          body.className = "falhou";
+          texto.textContent = navigator.onLine === false ? "Sem conexão com a internet" : "Não foi possível abrir o MTV TV";
+          holdScreen(true);
+          try { sair.focus(); } catch (e) { /* sem foco */ }
+        }
+
+        function agendar() {
+          clearTimeout(timer);
+          timer = setTimeout(tentar, RETRY_MS);
+        }
+
+        function tentar() {
+          if (tentando) return;
+          tentando = true;
+          clearTimeout(timer);
+          var feito = false;
+          function fim(ok) {
+            if (feito) return;
+            feito = true;
+            tentando = false;
+            if (ok) {
+              holdScreen(false);
+              location.replace(url);
+            } else {
+              mostrarAviso();
+              agendar();
+            }
+          }
+          var abortar = typeof AbortController === "function" ? new AbortController() : null;
+          var limite = setTimeout(function () { if (abortar) abortar.abort(); fim(false); }, TIMEOUT_MS);
+          try {
+            fetch(url, { mode: "no-cors", cache: "no-store", signal: abortar ? abortar.signal : undefined }).then(
+              function () { clearTimeout(limite); fim(true); },
+              function () { clearTimeout(limite); fim(false); }
+            );
+          } catch (e) {
+            clearTimeout(limite);
+            fim(false);
+          }
+        }
+
+        window.addEventListener("online", tentar);
+        sair.addEventListener("click", exitApp);
+        document.addEventListener("keydown", function (event) {
+          // 10009 = Voltar do controle Samsung.
+          if (event.keyCode === 10009 || event.key === "GoBack" || event.key === "Escape") exitApp();
+          else if (event.keyCode === 13 && body.className === "falhou") exitApp();
+        });
+
+        if (!url) { mostrarAviso(); return; }
+        tentar();
+      })();
+    </script>
+  </body>
+</html>

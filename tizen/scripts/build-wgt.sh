@@ -2,7 +2,7 @@
 # Gera o .wgt assinado com o perfil Samsung (padrão: mtvtv).
 # Uso: tizen/scripts/build-wgt.sh [--test|--app]
 #   --test  página de teste (navigator.userAgent), sem catálogo (padrão)
-#   --app   rebuilda o app web para Chromium 69 (pnpm build:tizen) e empacota web/dist-tizen
+#   --app   lançador local (tizen/launcher) que abre a URL hospedada de config/hosted.json; sem app nem catálogo no pacote
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -14,12 +14,7 @@ REPO_DIR="$(cd .. && pwd)"
 MODE="${1:---test}"
 case "$MODE" in
   --test) SRC="$TIZEN_DIR/test-page"; CONFIG_FLAG="--test" ;;
-  --app)
-    echo "Compilando o app web para Chromium 69..."
-    (cd "$REPO_DIR/web" && pnpm build:tizen)
-    SRC="$REPO_DIR/web/dist-tizen"
-    CONFIG_FLAG=""
-    ;;
+  --app) SRC="$TIZEN_DIR/launcher"; CONFIG_FLAG="" ;;
   *) echo "Uso: $0 [--test|--app]" >&2; exit 1 ;;
 esac
 
@@ -27,6 +22,8 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp -R "$SRC/." "$STAGE/"
 cp "$TIZEN_DIR/icon.png" "$STAGE/"
+# config.js leva a URL hospedada ao lançador (só no --app; o --test não usa).
+[ "$MODE" = "--app" ] && node "$REPO_DIR/web/scripts/hosted-config.ts" launcher-config > "$STAGE/config.js"
 # config.xml sai do modelo + config/hosted.json (versionado); falha se faltar o arquivo.
 node "$REPO_DIR/web/scripts/hosted-config.ts" tizen-config $CONFIG_FLAG > "$STAGE/config.xml"
 
