@@ -6,6 +6,7 @@ import { parseCatalog, type Catalog } from "./catalog/catalog";
 import { PLAY_PAUSE_KEY, type Command, type UiState } from "./input/commands";
 import { map } from "./input/input-mapper";
 import { systemClock } from "./lib/clock";
+import { installDebugOverlay } from "./debug/debug-log";
 import { watchConnectivity } from "./lib/connectivity";
 import { mathRandom } from "./lib/random";
 import { FakePlayer, mountFakePlayerView } from "./player/fake-player";
@@ -27,6 +28,7 @@ import { createTuner, type NowPlaying, type Tuner, type TunerStatus } from "./tu
 if (import.meta.env.MODE === "tizen") installChromium69Polyfills();
 
 const platform = detectPlatform();
+installDebugOverlay(window, { platform: platform.kind });
 platform.init();
 
 async function main(): Promise<void> {

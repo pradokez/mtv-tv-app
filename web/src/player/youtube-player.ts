@@ -1,3 +1,4 @@
+import { debugLog } from "../debug/debug-log";
 import { systemClock, type Clock, type TimerId } from "../lib/clock";
 import { createEmitter, type PlayerAdapter } from "./player";
 
@@ -80,6 +81,7 @@ export function createYouTubePlayer(
 
   const start = (videoId: string, startSec: number) => {
     if (!player) return;
+    debugLog(`carregando ${videoId}`);
     player.loadVideoById({ videoId, startSeconds: startSec });
     player.setPlaybackQuality?.("hd720");
     if (autoplayCheck !== undefined) clock.clearTimeout(autoplayCheck);
@@ -115,6 +117,7 @@ export function createYouTubePlayer(
   };
 
   const mountPlayer = () => void loadIframeApi().then((YT) => {
+    debugLog("api do YouTube carregada");
     const mount = document.createElement("div");
     container.prepend(mount);
     const instance = new YT.Player(mount, {
@@ -137,6 +140,11 @@ export function createYouTubePlayer(
       },
       events: {
         onReady: () => {
+          debugLog("player pronto");
+          clock.setTimeout(() => {
+            const frame = container.querySelector("iframe")?.getBoundingClientRect();
+            debugLog(`iframe ${frame ? `${Math.round(frame.width)}x${Math.round(frame.height)}` : "ausente"}`);
+          }, 4000);
           player = instance;
           // A replacement player must stay muted until the user unmutes.
           if (muted) instance.mute();
@@ -144,10 +152,12 @@ export function createYouTubePlayer(
           pending = undefined;
         },
         onStateChange: ({ data }) => {
+          debugLog(`estado ${data}`);
           if (data === State.PLAYING && !muted) autoplayKnownOk = true;
           if (data === State.ENDED && currentVideoId) ended.emit(currentVideoId);
         },
         onError: ({ data }) => {
+          debugLog(`erro do player ${data}`);
           failed = true;
           if (currentVideoId) errored.emit(currentVideoId, data);
         },
