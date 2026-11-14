@@ -25,6 +25,7 @@ export type Runner = (command: string, args: string[], env: Record<string, strin
 export const PRODUCTION_BRANCH = "main";
 
 const API = "https://api.cloudflare.com/client/v4";
+const PLAIN_ID = /^[A-Za-z0-9-]+$/;
 
 export function wranglerDeployer({
   project,
@@ -48,7 +49,10 @@ export function wranglerDeployer({
       if (!apiToken || !accountId) {
         throw new PublishError("o rollback usa a API do Cloudflare: defina CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID");
       }
-      if (!/^[A-Za-z0-9-]+$/.test(id)) throw new PublishError(`id de deploy inválido: ${id}`);
+      // All three go into the API path: no `/`, `..` or `?` that would change the request.
+      if (!PLAIN_ID.test(id)) throw new PublishError(`id de deploy inválido: ${id}`);
+      if (!PLAIN_ID.test(project)) throw new PublishError(`PAGES_PROJECT inválido: ${project}`);
+      if (!PLAIN_ID.test(accountId)) throw new PublishError("CLOUDFLARE_ACCOUNT_ID inválido: só letras, dígitos e -");
       const response = await fetch(
         `${API}/accounts/${accountId}/pages/projects/${project}/deployments/${id}/rollback`,
         { method: "POST", headers: { Authorization: `Bearer ${apiToken}` } },

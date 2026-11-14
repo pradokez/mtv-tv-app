@@ -61,11 +61,17 @@ describe("wranglerDeployer", () => {
     ).rejects.toThrow(/rollback recusado \(HTTP 404\): deployment not found/);
   });
 
-  it("needs the API credentials and a plain id to roll back", async () => {
+  it("needs the API credentials and plain ids to roll back", async () => {
     const fetch = async () => Response.json({ success: true });
     const deployer = (env: Record<string, string>) => wranglerDeployer({ project: "mtv-tv", run: recorder().run, env, fetch });
 
     await expect(deployer({}).promote("abc")).rejects.toThrow(/CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID/);
     await expect(deployer(credentials).promote("../../x")).rejects.toThrow(/id de deploy inválido/);
+    await expect(
+      wranglerDeployer({ project: "../x", run: recorder().run, env: credentials, fetch }).promote("abc"),
+    ).rejects.toThrow(/PAGES_PROJECT inválido/);
+    await expect(deployer({ ...credentials, CLOUDFLARE_ACCOUNT_ID: "a/b" }).promote("abc")).rejects.toThrow(
+      /CLOUDFLARE_ACCOUNT_ID inválido/,
+    );
   });
 });
