@@ -104,7 +104,7 @@ Testado em uma TCL C06 (Android 11).
 
 Para um emulador Android TV já aberto, use `android/scripts/install-tv.sh --device emulator-5554` (e, se a instalação travar, `adb shell settings put global package_verifier_enable 0`).
 
-> O snapshot real continua fora do repositório e de qualquer publicação. Ele só é empacotado no APK local para a TV; o script restaura o placeholder versionado depois da compilação.
+> O snapshot real nunca entra no git, mas é publicado abertamente no GitHub Pages pelo `pnpm publish:site` (ver [Publicar o site](#publicar-o-site)). Hoje o `install-tv.sh` da Android ainda o empacota no APK local, e restaura o placeholder versionado depois da compilação. Isso muda com a #64.
 
 ## Como usar
 
@@ -149,6 +149,8 @@ pnpm typecheck   # tsc estrito
 pnpm build       # typecheck + build em web/dist/
 pnpm catalog     # gera o catálogo real (exige YOUTUBE_API_KEY)
 pnpm publish:site  # builda e publica no GitHub Pages (ver "Publicar o site")
+pnpm publish:list  # lista as publicações (tags) e marca a que está no ar
+pnpm publish:rollback <tag>  # volta para uma publicação anterior
 ```
 
 - **Tela cheia no Mac:** ⌃⌘F no navegador. O app ocupa a janela inteira e não usa a Fullscreen API, que exige um gesto do usuário.
@@ -158,7 +160,7 @@ pnpm publish:site  # builda e publica no GitHub Pages (ver "Publicar o site")
 
 ## Catálogo de canais
 
-`pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site de origem e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git e nunca deve ser commitado nem passar por CI ou secret (a curadoria é do criador do site); ele só sai da sua máquina pelo `pnpm publish:site`, que o publica abertamente junto com o site (ver [Publicar o site](#publicar-o-site)). A permissão de redistribuição pelo criador do site de origem não foi verificada. O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
+`pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site de origem e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git: nunca é commitado e não passa por CI nem por secret. Ele só sai da sua máquina pelo `pnpm publish:site`, que o publica abertamente na branch `gh-pages`, junto com o site. A permissão do criador do site de origem para redistribuir a curadoria não foi verificada: ver o aviso "Risco assumido" em [Publicar o site](#publicar-o-site). O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
 
 **Comerciais:** a lista de comerciais dos intervalos é curada à mão em [`web/curadoria/comerciais-br.json`](web/curadoria/comerciais-br.json) (versionada, ao contrário do snapshot). O `pnpm catalog` lê esse arquivo, valida duração e embed de cada comercial junto com os clipes e grava o que sobrar no campo `commercials` do snapshot; eles não viram canal. Para trocar a lista, edite o JSON (`id`, `brand`, `title`, `year`) e rode `pnpm catalog` de novo. O relatório mostra quantos comerciais ficaram e quantos foram descartados.
 
@@ -174,6 +176,10 @@ O app é hospedado no GitHub Pages (`https://<owner>.github.io/<repo>/`), para o
 
 A publicação é um commit órfão (sem histórico) enviado com force-push para a branch `gh-pages`, a partir de uma pasta temporária: o seu repositório local não é tocado. Cada publicação ganha a tag `site-AAAAMMDD-HHMMSS` (UTC).
 
+**Risco assumido:** o catálogo é a curadoria do criador do site de origem, e a publicação o deixa público na internet (na `gh-pages` e nas tags). Não verifiquei se o criador permite redistribuí-lo. Assumo esse risco; se ele pedir a remoção, é preciso tirar a publicação do ar.
+
+**Endereço:** a URL e o caminho vêm de `config/hosted.json` (`domain` + `path`) e precisam bater com o `<owner>/<repo>` do `origin`, senão o site publicado não é o que as TVs abrem.
+
 **Uma vez:** em Settings → Pages do repositório, escolha "Deploy from a branch", branch `gh-pages` e pasta `/ (root)`. Não ponha proteção de branch na `gh-pages`, senão o force-push é recusado.
 
 ```bash
@@ -186,6 +192,30 @@ pnpm publish:rollback <tag>  # volta para uma publicação anterior (tags em pub
 - **Guardas:** o `publish:site` falha, sem enviar nada, se `public/catalog.json` faltar, for o catálogo de exemplo ou for pequeno demais (menos de 10 canais ou 1.000 vídeos), ou se o `dist-tizen/` gerado não tiver o `index.html` e o catálogo real.
 - **Catálogo real:** ele só existe na branch `gh-pages` e nas tags; nunca entra na `main`.
 - **Rollback:** `publish:rollback <tag>` republica o commit da tag na `gh-pages`. Ficam as 5 tags mais recentes (mais a que está no ar); as mais antigas são apagadas a cada publicação. Uma publicação quebrada derruba as duas TVs até o rollback.
+
+**Rollback, passo a passo:**
+
+1. Liste as publicações. A que está no ar vem marcada:
+
+   ```bash
+   pnpm publish:list
+   # site-20261114-153000  (no ar)
+   # site-20261113-101500
+   # site-20261112-090000
+   ```
+
+2. Escolha a tag anterior que funcionava e volte para ela:
+
+   ```bash
+   pnpm publish:rollback site-20261113-101500
+   ```
+
+3. O GitHub Pages leva alguns minutos para refletir o push. Abra a URL do site e confira antes de reabrir o app na TV.
+
+**O que muda em cada TV:**
+
+- **Samsung (Tizen):** o `content src` do widget é a URL hospedada. Depois de publicar ou de fazer rollback, basta reabrir o app, sem reinstalar. Ver [`tizen/README.md`](tizen/README.md#publicar-e-rollback).
+- **TCL (Android):** até a #64 o APK carrega o build empacotado nele, então publicar não muda nada ali. Para atualizar, reinstale com `android/scripts/install-tv.sh`. Ver [`android/README.md`](android/README.md#publicar-e-rollback).
 
 ## Contrato com a casca (Android ou Tizen)
 
@@ -209,7 +239,7 @@ O repositório é público. **Chave de API, IP, serial, token e qualquer dado do
 
 [`.env.example`](.env.example) lista as variáveis, sem valores. Nos docs e exemplos, o IP da TV é sempre `<ip-da-tv>`. O `.gitignore` cobre `.env*` (menos o exemplo), chaves e certificados, e `web/scripts/repo-hygiene.test.ts` (parte do `pnpm test`) falha se um arquivo versionado tiver IP privado (`192.168.*`, `10.*`, `172.16-31.*`), chave de API conhecida (`AIza…`, `ghp_…`, `cfut_…`) ou chave privada.
 
-**GitGuardian:** o alerta da PR #73 apontou dois tokens de fixture (`Xk3_9-…`, em `guards.test.ts` e `test-helpers.ts`), valores inventados para testar a validação do token de publicação: falso positivo, nada a rotacionar.
+**GitGuardian:** o alerta da PR #73 apontou dois tokens de fixture (`Xk3_9-…`), valores inventados para testar a validação do token de publicação do Cloudflare. Eles foram removidos do repositório na #83: falso positivo, nada a rotacionar.
 
 **Histórico:** auditoria de `main` e do histórico (121 arquivos): sem chave, token, certificado ou `.env`. Só há dois IPs privados de rede local (em docs e scripts já removidos), de risco baixo e inúteis fora da rede da casa. Decisão: **manter o histórico** (reescrevê-lo quebraria PRs e SHAs usados nas imagens do `docs/` e não elimina nada sensível). Se uma credencial real vazar um dia, ela deve ser rotacionada, não só apagada.
 
