@@ -53,8 +53,8 @@ function classicScript(): Plugin {
   };
 }
 
-// `base: "./"` keeps asset paths relative so the build works when the
-// Android shell serves `web/dist/` through WebViewAssetLoader.
+// `base: "./"` keeps asset paths relative so the build works under the
+// GitHub Pages base path (`/<repo>/`) that both TV shells load.
 export default defineConfig(({ mode }) => {
   const tizen = mode === "tizen";
   return {

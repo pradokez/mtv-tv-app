@@ -12,10 +12,17 @@
 // `shiftClock(ms)` recarrega a página somando `ms` ao Date.now() do app, nunca ao do iframe do YouTube.
 // A alteração fica só em memória e vale até a conexão fechar e o app reiniciar.
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const ADB = process.env.ADB ?? "adb";
 const PKG = "app.mtvtv";
 const PORT = 9333;
+/** URL do app hospedado, a mesma que o build põe em `BuildConfig.APP_URL`. */
+const APP_URL = execFileSync(
+  process.execPath,
+  [fileURLToPath(new URL("../../web/scripts/hosted-config.ts", import.meta.url)), "android-url"],
+  { encoding: "utf8" },
+).trim();
 
 export function adb(serial, ...args) {
   return execFileSync(ADB, ["-s", serial, ...args], { encoding: "utf8", maxBuffer: 1 << 26 }).trim();
@@ -75,7 +82,7 @@ export async function connectTv(serial) {
   if (!pid) throw new Error("O app não está rodando na TV");
   execFileSync(ADB, ["-s", serial, "forward", `tcp:${PORT}`, `localabstract:webview_devtools_remote_${pid}`]);
   const targets = await (await fetch(`http://localhost:${PORT}/json`)).json();
-  const page = targets.find((t) => t.type === "page" && t.url.includes("appassets"));
+  const page = targets.find((t) => t.type === "page" && t.url.startsWith(APP_URL));
   if (!page) throw new Error(`Página do app não encontrada: ${targets.map((t) => t.url).join(", ")}`);
 
   const ws = new WebSocket(page.webSocketDebuggerUrl);
@@ -140,7 +147,7 @@ export async function connectTv(serial) {
     },
     /** Recarrega a página com o relógio do app deslocado, só em memória. */
     shiftClock: async (ms) => {
-      const source = `if (location.hostname === "appassets.androidplatform.net") {
+      const source = `if (location.href.startsWith(${JSON.stringify(APP_URL)})) {
         const realNow = Date.now.bind(Date);
         Date.now = () => realNow() + ${ms};
       }`;
