@@ -177,7 +177,7 @@ O app roda dentro de uma casca: Android (WebView) ou Tizen. Só `web/src/platfor
 
 ## Privacidade
 
-O app não faz nenhuma requisição ao site original do catálogo: a CSP do `index.html` só libera o próprio app e o player do YouTube, e um teste falha se o código do app citar o domínio. Só o `pnpm catalog` (em `web/scripts/catalog-builder/`) consulta o site, e outro teste falha se qualquer arquivo do projeto citar os endpoints de contagem/telemetria.
+O app não faz nenhuma requisição ao site original do catálogo: a CSP do `index.html` só libera o próprio site (o `'self'` é o domínio hospedado) e o player do YouTube, e um teste confere a política no `index.html` e nos builds, e um teste falha se o código do app citar o domínio. Só o `pnpm catalog` (em `web/scripts/catalog-builder/`) consulta o site, e outro teste falha se qualquer arquivo do projeto citar os endpoints de contagem/telemetria.
 
 ## Documentação adicional
 
