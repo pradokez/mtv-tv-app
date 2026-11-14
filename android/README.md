@@ -47,13 +47,13 @@ No emulador, desligue a verificação do Play Protect para a instalação não t
 `OriginPolicy` (`app/src/main/java/app/mtvtv/OriginPolicy.kt`) é Kotlin puro e decide duas coisas a
 partir de uma URL:
 
-- `canNavigate(url)`: a casca só navega para o app hospedado (`https://<domínio>/<token>`, em
-  qualquer subcaminho) e para o player do YouTube (`www.youtube.com` e `www.youtube-nocookie.com`).
+- `canNavigate(url)`: a casca só navega para o app hospedado (`https://<domínio>/`, em
+  qualquer caminho) e para o player do YouTube (`www.youtube.com` e `www.youtube-nocookie.com`).
   Recusa `http`, `file:`, `javascript:`, `data:`, subdomínios parecidos, credenciais na URL, porta
-  diferente da padrão, caminho sem o token e URL malformada.
+  diferente da padrão e URL malformada.
 - `canCallExitApp(url)`: só o app hospedado pode chamar `MtvTv.exitApp()`. O YouTube não pode.
 
-O domínio e o token vêm por parâmetro (`OriginPolicy(hostedBaseUrl)`) e não ficam no git; o
+O domínio vem por parâmetro (`OriginPolicy(hostedBaseUrl)`, `https://<domínio>/`); o
 construtor lança `IllegalArgumentException` se a base for inválida. A `MainActivity` ainda não usa
 a política: isso entra na #64.
 
