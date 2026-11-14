@@ -34,7 +34,7 @@ class MainActivity : Activity() {
     @Volatile private var servedDir: File? = null
 
     /** Versão da página atual (`null` = assets do APK); decide se vale recarregar. */
-    private var servedVersion: String? = null
+    @Volatile private var servedVersion: String? = null
     private var wasPaused = false
     private var lastCheckAt = 0L
 
@@ -148,7 +148,7 @@ class MainActivity : Activity() {
         val baseUrl = BuildConfig.APP_URL.let { if (it.endsWith("/")) it else "$it/" }
         updater.execute {
             try {
-                store.checkAndUpdate(baseUrl)
+                store.checkAndUpdate(baseUrl, inUse = servedVersion)
             } catch (e: Exception) {
                 // Atualizar é um extra: qualquer falha mantém a versão atual.
             }

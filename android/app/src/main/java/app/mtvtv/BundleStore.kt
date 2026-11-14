@@ -72,8 +72,11 @@ class BundleStore(
 
     fun currentDir(): File? = currentVersion()?.let { File(base, it) }
 
-    /** Busca o manifesto em [baseUrl] (termina em `/`) e, havendo versão nova, baixa e instala. */
-    fun checkAndUpdate(baseUrl: String): Result {
+    /**
+     * Busca o manifesto em [baseUrl] (termina em `/`) e, havendo versão nova, baixa e instala.
+     * [inUse] é a versão que a página aberta está servindo: a limpeza não a apaga.
+     */
+    fun checkAndUpdate(baseUrl: String, inUse: String? = null): Result {
         if (!baseUrl.startsWith("https://")) return Result.NothingToDo
         val manifest = try {
             String(downloader.fetch(baseUrl + "manifest.json", MAX_MANIFEST_BYTES), Charsets.UTF_8)
@@ -86,11 +89,11 @@ class BundleStore(
         return when (decision) {
             UpdateDecision.UpToDate, UpdateDecision.ShellTooOld -> Result.NothingToDo
             is UpdateDecision.Invalid -> Result.Failed(decision.reason)
-            is UpdateDecision.Download -> install(baseUrl, decision, currentDir, current)
+            is UpdateDecision.Download -> install(baseUrl, decision, currentDir, keep = setOfNotNull(current, inUse))
         }
     }
 
-    private fun install(baseUrl: String, plan: UpdateDecision.Download, currentDir: File?, previous: String?): Result {
+    private fun install(baseUrl: String, plan: UpdateDecision.Download, currentDir: File?, keep: Set<String>): Result {
         base.mkdirs()
         val tmp = File(base, ".tmp-${plan.version}")
         tmp.deleteRecursively()
@@ -108,7 +111,7 @@ class BundleStore(
             finalDir.deleteRecursively()
             if (!tmp.renameTo(finalDir)) throw IOException("não consegui renomear o pacote")
             writePointer(plan.version)
-            prune(keep = setOfNotNull(plan.version, previous))
+            prune(keep = keep + plan.version)
             return Result.Updated(plan.version)
         } catch (e: IOException) {
             tmp.deleteRecursively()

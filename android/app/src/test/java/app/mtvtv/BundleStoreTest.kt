@@ -149,6 +149,21 @@ class BundleStoreTest {
     }
 
     @Test
+    fun naoApagaAVersaoQueAPaginaEstaServindo() {
+        val server = FakeDownloader(mutableMapOf())
+        val s = store(server)
+        publish(server, v1, mapOf("index.html" to "v1"))
+        s.checkAndUpdate(base)
+        // A página abriu na v1; duas versões novas chegam na mesma sessão.
+        for (v in listOf(v2, v3)) {
+            publish(server, v, mapOf("index.html" to v))
+            s.checkAndUpdate(base, inUse = v1)
+        }
+        assertEquals(setOf(v1, v2, v3, "current"), dir.list()!!.toSet())
+        assertEquals(v3, s.currentVersion())
+    }
+
+    @Test
     fun ponteiroParaPastaSemIndexNaoValeEApagaTemporariosVelhos() {
         File(dir, "current").writeText(v1)
         File(dir, v1).mkdirs()
