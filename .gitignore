@@ -4,4 +4,5 @@ web/dist-tizen/
 .DS_Store
 web/public/catalog.json
 web/.cache/
+web/.publish.local
 tizen/build/
