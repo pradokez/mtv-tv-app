@@ -1,4 +1,4 @@
-import { debugActive, debugLog } from "../debug/debug-log";
+import { debugLog, watchPlayerForDebug } from "../debug/debug-log";
 import { systemClock, type Clock, type TimerId } from "../lib/clock";
 import { createEmitter, type PlayerAdapter } from "./player";
 
@@ -16,10 +16,6 @@ interface YTPlayer {
   mute(): void;
   unMute(): void;
   getPlayerState(): number;
-  getCurrentTime?(): number;
-  getVideoLoadedFraction?(): number;
-  getDuration?(): number;
-  getAvailableQualityLevels?(): string[];
   setPlaybackQuality?(quality: string): void;
   destroy(): void;
 }
@@ -82,6 +78,7 @@ export function createYouTubePlayer(
   let autoplayCheck: TimerId | undefined;
   let muted = false;
   let autoplayKnownOk = autoplayAllowed;
+  let stopWatching = () => {};
 
   const start = (videoId: string, startSec: number) => {
     if (!player) return;
@@ -153,12 +150,8 @@ export function createYouTubePlayer(
       events: {
         onReady: () => {
           debugLog("player pronto");
-          clock.setTimeout(() => {
-            const frame = container.querySelector("iframe")?.getBoundingClientRect();
-            debugLog(`iframe ${frame ? `${Math.round(frame.width)}x${Math.round(frame.height)}` : "ausente"} allow="${container.querySelector("iframe")?.getAttribute("allow")}"`);
-          }, 4000);
           player = instance;
-          if (debugActive()) pollForDebug();
+          stopWatching = watchPlayerForDebug(instance, container, clock);
           // A replacement player must stay muted until the user unmutes.
           if (muted) instance.mute();
           if (pending) start(pending.videoId, pending.startSec);
@@ -182,27 +175,11 @@ export function createYouTubePlayer(
   }, retryWhenOnline);
   mountPlayer();
 
-  let polling = false;
-  const pollForDebug = () => {
-    if (polling) return;
-    polling = true;
-    const tick = () => {
-      if (player) {
-        const time = player.getCurrentTime?.().toFixed(1);
-        const loaded = player.getVideoLoadedFraction?.().toFixed(2);
-        const duration = player.getDuration?.().toFixed(0);
-        const qualities = player.getAvailableQualityLevels?.().length;
-        debugLog(`estado ${player.getPlayerState()} t=${time} carregado=${loaded} dur=${duration} qual=${qualities}`);
-      }
-      clock.setTimeout(tick, 3000);
-    };
-    tick();
-  };
-
   const replacePlayer = () => {
     failed = false;
     if (autoplayCheck !== undefined) clock.clearTimeout(autoplayCheck);
     autoplayCheck = undefined;
+    stopWatching();
     player?.destroy();
     player = undefined;
     mountPlayer();

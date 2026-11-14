@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { debugLog, debugRequested, installDebugOverlay } from "./debug-log";
+import type { Clock } from "../lib/clock";
+import { debugLog, debugRequested, installDebugOverlay, watchPlayerForDebug } from "./debug-log";
 
 function fakeWindow(search: string) {
   const panel = { className: "", textContent: "" };
@@ -18,6 +19,24 @@ function fakeWindow(search: string) {
   return { win: win as unknown as Window, panel };
 }
 
+function manualClock() {
+  const timers = new Map<number, () => void>();
+  let nextId = 0;
+  const clock = {
+    now: () => 0,
+    setTimeout: (cb: () => void) => {
+      timers.set(++nextId, cb);
+      return nextId as unknown as ReturnType<typeof setTimeout>;
+    },
+    clearTimeout: (id: unknown) => void timers.delete(id as number),
+  } as Clock;
+  const fireAll = () => [...timers].forEach(([id, cb]) => (timers.delete(id), cb()));
+  return { clock, timers, fireAll };
+}
+
+const probe = { getPlayerState: () => 1, getCurrentTime: () => 12.34, getDuration: () => 60 };
+const container = { querySelector: () => null };
+
 describe("debug overlay", () => {
   it("só liga com ?debug=1", () => {
     expect(debugRequested("")).toBe(false);
@@ -30,6 +49,12 @@ describe("debug overlay", () => {
     expect(installDebugOverlay(win, {})).toBe(false);
     debugLog("x");
     expect(panel.textContent).toBe("");
+  });
+
+  it("sem o overlay o acompanhamento do player não agenda nada", () => {
+    const { clock, timers } = manualClock();
+    watchPlayerForDebug(probe, container, clock)();
+    expect(timers.size).toBe(0);
   });
 
   it("com o parâmetro mostra as informações e só as últimas linhas registradas", () => {
@@ -48,5 +73,18 @@ describe("debug overlay", () => {
     for (let i = 0; i < 3; i++) debugLog("repetida");
     expect(panel.textContent.match(/repetida/g)).toHaveLength(1);
     expect(panel.textContent).toContain("repetida (x3)");
+  });
+
+  it("acompanha o player a cada tick e para quando mandam parar", () => {
+    const { win, panel } = fakeWindow("?debug=1");
+    installDebugOverlay(win, {});
+    const { clock, timers, fireAll } = manualClock();
+    const stop = watchPlayerForDebug(probe, container, clock);
+    expect(panel.textContent).toContain("estado 1 t=12.3");
+    fireAll();
+    expect(panel.textContent).toContain("iframe ausente");
+    expect(timers.size).toBe(1); // o próximo tick
+    stop();
+    expect(timers.size).toBe(0);
   });
 });
