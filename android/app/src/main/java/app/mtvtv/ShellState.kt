@@ -80,7 +80,11 @@ object Notice {
     fun render(template: String, online: Boolean): String = template.replace(PLACEHOLDER, text(online))
 }
 
-/** Tempos e critérios de carga e de nova tentativa, os mesmos do lançador da Tizen. */
+/**
+ * Tempos e critérios de carga e de nova tentativa. Intervalo e limite da sondagem são os do
+ * lançador da Tizen (`tizen/launcher/index.html`); o prazo de carga e o critério por status HTTP
+ * são só da Android, que sonda com HEAD e vê o status (a Tizen usa `fetch` `no-cors`, sem status).
+ */
 object Retry {
     /** Intervalo entre tentativas enquanto o aviso está na tela. */
     const val INTERVAL_MS = 10_000L
