@@ -50,4 +50,6 @@ dependencies {
     implementation("androidx.webkit:webkit:1.11.0")
 
     testImplementation("junit:junit:4.13.2")
+    // O android.jar só traz stubs de org.json: nos testes JVM entra a implementação real.
+    testImplementation("org.json:json:20240303")
 }
