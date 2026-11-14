@@ -22,7 +22,7 @@ function writeConfig(content: unknown): string {
   return path;
 }
 
-const sample = { domain: "meu-app.pages.dev" };
+const sample = { domain: "meu-usuario.github.io", path: "/meu-repo/" };
 
 function runCli(args: string[], configPath: string): { status: number | null; stdout: string; stderr: string } {
   const { status, stdout, stderr } = spawnSync("node", [cli, ...args], {
@@ -33,8 +33,12 @@ function runCli(args: string[], configPath: string): { status: number | null; st
 }
 
 describe("hosted URL", () => {
-  it("is the https root of the domain, with no secret path", () => {
-    expect(hostedUrl(sample)).toBe("https://meu-app.pages.dev/");
+  it("is the https domain plus the base path, with no secret", () => {
+    expect(hostedUrl(sample)).toBe("https://meu-usuario.github.io/meu-repo/");
+  });
+
+  it("is the domain root when the path is /", () => {
+    expect(hostedUrl({ domain: "meu-app.pages.dev", path: "/" })).toBe("https://meu-app.pages.dev/");
   });
 
   it("is what the Android build receives", () => {
@@ -79,7 +83,7 @@ describe("tizen-config CLI (used by build-wgt.sh)", () => {
 });
 
 describe("loadHostedConfig", () => {
-  it("reads the domain", () => {
+  it("reads the domain and the path", () => {
     expect(loadHostedConfig(writeConfig(sample))).toEqual(sample);
   });
 
@@ -90,7 +94,14 @@ describe("loadHostedConfig", () => {
   it.each([
     ["domain with scheme", { ...sample, domain: "https://meu-app.pages.dev" }, /domain/],
     ["domain with path", { ...sample, domain: "meu-app.pages.dev/x" }, /domain/],
-    ["missing domain", {}, /domain/],
+    ["missing domain", { path: "/x/" }, /domain/],
+    ["missing path", { domain: sample.domain }, /path/],
+    ["path without leading slash", { ...sample, path: "meu-repo/" }, /path/],
+    ["path without trailing slash", { ...sample, path: "/meu-repo" }, /path/],
+    ["path with ..", { ...sample, path: "/a/../b/" }, /path/],
+    ["path with encoded dot", { ...sample, path: "/%2e%2e/" }, /path/],
+    ["path with empty segment", { ...sample, path: "/a//b/" }, /path/],
+    ["path with query", { ...sample, path: "/a/?x=1" }, /path/],
     ["invalid JSON", "{nope", /JSON/],
   ])("rejects %s", (_name, content, message) => {
     expect(() => loadHostedConfig(writeConfig(content))).toThrow(message);
@@ -104,13 +115,14 @@ describe("loadHostedConfig", () => {
 describe("generated Tizen config.xml", () => {
   const xml = renderTizenConfig(template, tizenOptionsFor(sample));
 
-  it("points content src at the hosted URL", () => {
-    expect(xml).toContain('<content src="https://meu-app.pages.dev/"/>');
+  it("points content src at the hosted URL, base path included", () => {
+    expect(xml).toContain('<content src="https://meu-usuario.github.io/meu-repo/"/>');
   });
 
   it("restricts access to the hosted domain and YouTube, never *", () => {
     const origins = [...xml.matchAll(/<access origin="([^"]+)"/g)].map((m) => m[1]);
-    expect(origins).toContain("https://meu-app.pages.dev");
+    // <access origin> is per origin: the path stays out of it.
+    expect(origins).toContain("https://meu-usuario.github.io");
     expect(origins).toContain("https://www.youtube.com");
     expect(origins).not.toContain("*");
     expect(origins.every((o) => o?.startsWith("https://"))).toBe(true);

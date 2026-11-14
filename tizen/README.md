@@ -84,7 +84,7 @@ Com o app servido por http (testado a partir do Mac), o 153 some, o que confirma
 
 ## Configuração por build
 
-O domínio do app hospedado vive em `config/hosted.json` (versionado: o site é público, o endereço não é segredo). Ele tem só `domain` (só o domínio, ex.: `meu-app.pages.dev`). A URL é `https://<domain>/`.
+O endereço do app hospedado vive em `config/hosted.json` (versionado: o site é público, o endereço não é segredo). Ele tem `domain` (só o domínio, ex.: `meu-usuario.github.io`) e `path` (o caminho base, começa e termina com `/`, ex.: `/mtv-tv-app/`; `/` se o app estiver na raiz do domínio). O GitHub Pages serve um repositório em `https://<usuário>.github.io/<repo>/`, por isso o caminho. A URL é `https://<domain><path>`.
 
-- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com a URL e `<access>` só para o domínio hospedado e o YouTube (nada de `*`). Sem o arquivo, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
+- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com a URL e `<access>` só para o domínio hospedado e o YouTube (a Tizen restringe por origem, então o caminho não entra no `<access>`) (nada de `*`). Sem o arquivo, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
 - A Android lê a mesma URL no build como `BuildConfig.APP_URL`.
