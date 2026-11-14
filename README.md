@@ -215,16 +215,16 @@ pnpm publish:rollback <tag>  # volta para uma publicação anterior (tags em pub
 **O que muda em cada TV:**
 
 - **Samsung (Tizen):** o `content src` do widget é a URL hospedada. Depois de publicar ou de fazer rollback, basta reabrir o app, sem reinstalar. Ver [`tizen/README.md`](tizen/README.md#publicar-e-rollback).
-- **TCL (Android):** até a #64 o APK carrega o build empacotado nele, então publicar não muda nada ali. Para atualizar, reinstale com `android/scripts/install-tv.sh`. Ver [`android/README.md`](android/README.md#publicar-e-rollback).
+- **TCL (Android):** a casca baixa o site publicado e o serve pela origem local da WebView (sem anúncios do YouTube, #91). Publicar ou fazer rollback chega à TV na abertura seguinte do app; o APK só precisa ser reinstalado (`android/scripts/install-tv.sh`) quando a própria casca muda. Ver [`android/README.md`](android/README.md#atualização-do-app-web).
 
 ## Contrato com a casca (Android ou Tizen)
 
 O app roda dentro de uma casca: Android (WebView) ou Tizen. Só `web/src/platform/platform.ts` conhece a casca: ele detecta a plataforma (`window.MtvTv` na Android, `tizen` na Tizen, senão navegador) e expõe `kind`, `exitApp()` e `autoplayAllowed`. O resto do app consome essa interface. Na Tizen a detecção já existe, com autoplay permitido; a saída real e o registro de teclas ficam para outras issues.
 
 - **Build:** `pnpm build` gera `web/dist/` (`index.html`, `assets/`, `catalog.json`), com caminhos relativos.
-- **Origem:** sirva o build pelo `WebViewAssetLoader` (`https://appassets.androidplatform.net/assets/web/index.html`), não por `file://`. O app carrega o catálogo com `fetch`, que não funciona em `file://`, e o player do YouTube exige uma origem HTTP(S).
+- **Origem:** sirva o build pelo `WebViewAssetLoader` (`https://appassets.androidplatform.net/app/index.html`), não por `file://`. O app carrega o catálogo com `fetch`, que não funciona em `file://`, e o player do YouTube exige uma origem HTTP(S).
 - **Teclas:** o app lê só `KeyboardEvent.key`. A casca repassa setas como `ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, OK como `Enter`, Voltar como `Escape`, CH+/CH- como `ChannelUp`/`ChannelDown`, Menu como `ContextMenu`, a tecla amarela como `ColorF2Yellow` e Info como `Info`.
-- **Empacotamento:** a casca carrega `assets/web/index.html`. O conteúdo de `web/dist/` deve chegar a `android/app/src/main/assets/web/` no build do APK (de preferência por uma task Gradle, sem commitar o build).
+- **Empacotamento:** a casca serve o pacote baixado do site publicado e, como reserva, `assets/web/index.html`. O conteúdo de `web/dist/` chega a `android/app/src/main/assets/web/` no build do APK (`android/scripts/install-tv.sh`), sem commitar o build.
 - **WebView:** JavaScript e DOM storage ligados, e `mediaPlaybackRequiresUserGesture = false`, para o autoplay com som funcionar.
 
 ## Segredos e dados do ambiente

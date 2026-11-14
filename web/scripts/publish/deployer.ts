@@ -13,6 +13,7 @@ import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PublishError } from "./guards.ts";
+import { buildManifest } from "./manifest.ts";
 
 export type Release = { tag: string; current: boolean };
 
@@ -113,6 +114,9 @@ export function gitDeployer({
         cpSync(dir, cwd, { recursive: true });
         // Without it GitHub would run the files through Jekyll and drop some of them.
         writeFileSync(join(cwd, ".nojekyll"), "");
+        // What the Android shell reads to update itself. Its version is the tag, so a rollback
+        // (gh-pages back to an old commit) brings that release's own manifest along.
+        writeFileSync(join(cwd, "manifest.json"), `${JSON.stringify(buildManifest(cwd, tag), null, 2)}\n`);
         await git(cwd, "init", "-q", "-b", BRANCH);
         await git(cwd, "add", "-A");
         try {
