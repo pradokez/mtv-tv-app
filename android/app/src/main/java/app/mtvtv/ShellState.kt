@@ -41,9 +41,6 @@ class ShellState(private val origin: OriginPolicy) {
         return true
     }
 
-    /** A rede voltou: vale testar o app hospedado de novo só se o aviso está na tela. */
-    fun shouldRetryOnNetworkAvailable(): Boolean = noticeVisible
-
     /**
      * O que fazer com uma tecla do controle. Sem aviso, ela vai para o app web, que decide.
      * Com o aviso, Voltar e OK (o botão Sair está em foco) fecham o app no primeiro aperto e

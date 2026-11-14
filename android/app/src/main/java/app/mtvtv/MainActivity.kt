@@ -54,8 +54,9 @@ class MainActivity : Activity() {
 
     // Callbacks na thread principal (handler no registro), como o resto do estado da casca.
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        // probeAndReload só age com o aviso na tela.
         override fun onAvailable(network: Network) {
-            if (shell.shouldRetryOnNetworkAvailable()) probeAndReload()
+            probeAndReload()
         }
 
         override fun onLost(network: Network) {

@@ -64,13 +64,6 @@ class ShellStateTest {
     }
 
     @Test
-    fun tentaDeNovoAoVoltarARedeSoComOAvisoNaTela() {
-        assertFalse(state.shouldRetryOnNetworkAvailable())
-        state.onLoadFailed()
-        assertTrue(state.shouldRetryOnNetworkAvailable())
-    }
-
-    @Test
     fun semAvisoAsTeclasVaoParaOAppWeb() {
         for (key in RemoteKey.values()) {
             assertEquals(KeyAction.FORWARD, state.keyAction(key, isDown = true, isRepeat = false))
