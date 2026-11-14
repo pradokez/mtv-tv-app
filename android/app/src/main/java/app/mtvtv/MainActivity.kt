@@ -13,23 +13,41 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewAssetLoader
+import java.io.File
+import java.util.concurrent.Executors
 
 /**
- * Casca nativa: uma Activity em tela cheia com uma única WebView que carrega o app web
- * dos assets do APK (`assets/web/index.html`).
+ * Casca nativa: uma Activity em tela cheia com uma única WebView.
+ *
+ * O app web é servido sempre pela origem local da WebView (`appassets.androidplatform.net`):
+ * o YouTube embutido não mostra anúncios nela, e o localStorage (favoritos, modo, último canal)
+ * fica no mesmo lugar (#91). O conteúdo vem do pacote baixado do site publicado (ver
+ * [BundleStore]) ou, sem ele, dos assets do APK (`assets/web/`), que ficam como reserva.
  */
 class MainActivity : Activity() {
 
     private lateinit var webView: WebView
+    private lateinit var store: BundleStore
+    private val updater = Executors.newSingleThreadExecutor()
+
+    /** Pasta servida na página atual (`null` = assets do APK). Fixada a cada carga do index. */
+    @Volatile private var servedDir: File? = null
+
+    /** Versão da página atual (`null` = assets do APK); decide se vale recarregar. */
+    private var servedVersion: String? = null
+    private var wasPaused = false
+    private var lastCheckAt = 0L
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        store = BundleStore(File(filesDir, "web"), HttpDownloader(), BuildConfig.VERSION_CODE)
+
         val assetLoader = WebViewAssetLoader.Builder()
             .setDomain(ASSET_HOST)
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/app/", AppPathHandler())
             .build()
 
         webView = WebView(this).apply {
@@ -58,15 +76,23 @@ class MainActivity : Activity() {
         setContentView(webView)
 
         webView.loadUrl(START_URL)
+        checkForUpdate()
     }
 
     override fun onResume() {
         super.onResume()
         hideSystemBars()
         webView.onResume()
+        if (wasPaused) {
+            wasPaused = false
+            // A versão nova só entra aqui (ou na próxima abertura), nunca no meio de um vídeo.
+            if (store.currentVersion() != servedVersion) webView.loadUrl(START_URL)
+            checkForUpdate()
+        }
     }
 
     override fun onPause() {
+        wasPaused = true
         webView.onPause()
         super.onPause()
     }
@@ -77,6 +103,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        updater.shutdown()
         webView.destroy()
         super.onDestroy()
     }
@@ -113,6 +140,43 @@ class MainActivity : Activity() {
             )
     }
 
+    /** Busca o manifesto publicado e baixa a versão nova em segundo plano (no máx. 1 vez por hora). */
+    private fun checkForUpdate() {
+        val now = System.currentTimeMillis()
+        if (lastCheckAt != 0L && now - lastCheckAt < CHECK_INTERVAL_MS) return
+        lastCheckAt = now
+        val baseUrl = BuildConfig.APP_URL.let { if (it.endsWith("/")) it else "$it/" }
+        updater.execute {
+            try {
+                store.checkAndUpdate(baseUrl)
+            } catch (e: Exception) {
+                // Atualizar é um extra: qualquer falha mantém a versão atual.
+            }
+        }
+    }
+
+    /**
+     * Serve o caminho `/app/` (tudo abaixo dele). O `index.html` fixa a versão da página (pasta baixada ou assets do APK);
+     * os demais arquivos saem da mesma versão, mesmo que uma nova chegue durante a sessão.
+     */
+    private inner class AppPathHandler : WebViewAssetLoader.PathHandler {
+        private val assets = WebViewAssetLoader.AssetsPathHandler(this@MainActivity)
+
+        override fun handle(path: String): WebResourceResponse? {
+            if (path == "index.html") {
+                val dir = store.currentDir()
+                servedDir = dir
+                servedVersion = dir?.name
+            }
+            val dir = servedDir?.takeIf { File(it, "index.html").isFile }
+            return if (dir != null) {
+                WebViewAssetLoader.InternalStoragePathHandler(this@MainActivity, dir).handle(path)
+            } else {
+                assets.handle("web/$path")
+            }
+        }
+    }
+
     /** Única ação que o app web pode pedir à casca; só fecha a Activity. */
     private inner class ExitBridge {
         @JavascriptInterface
@@ -125,8 +189,8 @@ class MainActivity : Activity() {
 
     companion object {
         private const val ASSET_HOST = "appassets.androidplatform.net"
-        // Para apontar para o build da #2, basta substituir o conteúdo de assets/web/.
-        private const val START_URL = "https://$ASSET_HOST/assets/web/index.html"
+        private const val START_URL = "https://$ASSET_HOST/app/index.html"
+        private const val CHECK_INTERVAL_MS = 60 * 60 * 1000L
 
         // keyCode seguem os valores de KeyboardEvent do navegador, para o Input Mapper do app web.
         private val KEYS = mapOf(
