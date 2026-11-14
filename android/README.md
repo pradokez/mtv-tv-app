@@ -47,13 +47,17 @@ No emulador, desligue a verificação do Play Protect para a instalação não t
 `OriginPolicy` (`app/src/main/java/app/mtvtv/OriginPolicy.kt`) é Kotlin puro e decide duas coisas a
 partir de uma URL:
 
-- `canNavigate(url)`: a casca só navega para o app hospedado (`https://<domínio>/`, em
-  qualquer caminho) e para o player do YouTube (`www.youtube.com` e `www.youtube-nocookie.com`).
-  Recusa `http`, `file:`, `javascript:`, `data:`, subdomínios parecidos, credenciais na URL, porta
+- `canNavigate(url)`: a casca só navega para o app hospedado, **dentro do caminho base**
+  (`https://<domínio><caminho>`, ex.: `https://usuario.github.io/mtv-tv-app/`), e para o player do
+  YouTube (`www.youtube.com` e `www.youtube-nocookie.com`). Recusa outro caminho do mesmo domínio
+  (outro repositório do `github.io`), `/mtv-tv-app-parecido`, `..` e `%2e`/`%2f`/`%5c` no caminho,
+  `http`, `file:`, `javascript:`, `data:`, subdomínios parecidos, credenciais na URL, porta
   diferente da padrão e URL malformada.
-- `canCallExitApp(url)`: só o app hospedado pode chamar `MtvTv.exitApp()`. O YouTube não pode.
+- `canCallExitApp(url)`: só páginas do app hospedado, dentro do caminho base, podem chamar
+  `MtvTv.exitApp()`. O YouTube não pode.
 
-O domínio vem por parâmetro (`OriginPolicy(hostedBaseUrl)`, `https://<domínio>/`); o
+O domínio e o caminho vêm por parâmetro (`OriginPolicy(hostedBaseUrl)`, `https://<domínio><caminho>`,
+barra final opcional; caminho `/` vale o domínio inteiro); o
 construtor lança `IllegalArgumentException` se a base for inválida. A `MainActivity` ainda não usa
 a política: isso entra na #64.
 
@@ -65,4 +69,4 @@ cd android && ./gradlew test
 
 ## URL do app hospedado
 
-O build lê o domínio de `config/hosted.json` (versionado). O Gradle chama `web/scripts/hosted-config.ts android-url` e expõe o resultado como `BuildConfig.APP_URL`, a mesma URL usada para gerar o `config.xml` da Tizen. Sem o arquivo, o build falha dizendo o que criar. Ver [`tizen/README.md`](../tizen/README.md#configuração-por-build).
+O build lê o domínio e o caminho base de `config/hosted.json` (versionado). O Gradle chama `web/scripts/hosted-config.ts android-url` e expõe o resultado como `BuildConfig.APP_URL`, a mesma URL usada para gerar o `config.xml` da Tizen. Sem o arquivo, o build falha dizendo o que criar. Ver [`tizen/README.md`](../tizen/README.md#configuração-por-build).
