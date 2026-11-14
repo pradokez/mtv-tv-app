@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Instala o .wgt de tizen/build na TV e abre o app.
-# Uso: tizen/scripts/install-tv.sh [ip-da-tv]     (padrão: $TV_IP ou 192.168.0.13)
+# Uso: tizen/scripts/install-tv.sh <ip-da-tv>     (ou TV_IP=<ip-da-tv>; sem IP padrão)
 # ATENÇÃO: a TV é compartilhada e tem dados de uso reais; confirme com o dono antes.
 set -euo pipefail
 
@@ -8,7 +8,8 @@ cd "$(dirname "$0")/.."
 # shellcheck source=env.sh
 . "$PWD/scripts/env.sh"
 
-TV="${1:-${TV_IP:-$TV_IP_DEFAULT}}"
+TV="${1:-${TV_IP:-}}"
+[ -n "$TV" ] || { echo "Informe o IP da TV: $0 <ip-da-tv> ou TV_IP=<ip-da-tv>." >&2; exit 1; }
 APP_ID="$(sed -n 's/.*<tizen:application id="\([^"]*\)".*/\1/p' config.template.xml)"
 [ -n "$APP_ID" ] || { echo "Não achei o id do app em tizen/config.template.xml." >&2; exit 1; }
 WGT="$PWD/build/$WGT_NAME"

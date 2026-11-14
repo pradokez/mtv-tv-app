@@ -15,7 +15,7 @@ Empacota o app web como `.wgt` e instala na Samsung QN55Q80TAGXZD (Tizen 5.5) po
 ```bash
 tizen/scripts/build-wgt.sh --test   # página de teste (padrão)
 tizen/scripts/build-wgt.sh --app    # rebuilda web/ (pnpm build:tizen) e empacota web/dist-tizen
-tizen/scripts/install-tv.sh         # IP padrão 192.168.0.13; ou install-tv.sh <ip> / TV_IP=<ip>
+tizen/scripts/install-tv.sh         # informe o IP: install-tv.sh <ip-da-tv> ou TV_IP=<ip-da-tv>
 ```
 
 `--app` sempre roda `pnpm build:tizen` antes de empacotar, para nunca instalar um `dist-tizen/` velho. Esse build (`vite build --mode tizen`) converte JS e CSS para `chrome69`, o Chromium da Q80 (ver [Chromium da Q80](#chromium-da-q80)), e grava em `web/dist-tizen/`; o `pnpm build` normal (web e Android) continua igual em `web/dist/`.
@@ -30,7 +30,7 @@ Depois do build, `web/scripts/check-bundle.ts` confere o `dist-tizen/` e falha o
 1. Em **Apps**, digite `12345` (o controle não tem teclado numérico: o botão 123 só abre o teclado na tela de Apps; o SmartThings no celular também serve).
 2. Ligue **Developer mode** e preencha **Host PC IP** com o IP do Mac (`ipconfig getifaddr en0`).
 3. Desligue e ligue a TV de verdade (pelo controle, depois tire da tomada se preciso). Sem reiniciar, a porta do `sdb` não abre.
-4. Confira: `nc -z 192.168.0.13 26101`. Porta fechada = modo desenvolvedor não está valendo. O IP do Mac pode mudar e a TV precisa estar na mesma rede.
+4. Confira: `nc -z <ip-da-tv> 26101`. Porta fechada = modo desenvolvedor não está valendo. O IP do Mac pode mudar e a TV precisa estar na mesma rede.
 
 ### 2. Tizen Studio, PATH e JAVA_HOME
 - Tizen Studio 6.1 em `~/tizen-studio`, com a extensão **TV-SAMSUNG-Public** e o pacote **cert-add-on** (Samsung Certificate Extension; sem ele o Certificate Manager não oferece Samsung).
@@ -38,7 +38,7 @@ Depois do build, `web/scripts/check-bundle.ts` confere o `dist-tizen/` e falha o
 
 ### 3. Conectar
 ```bash
-sdb connect 192.168.0.13   # porta 26101
+sdb connect <ip-da-tv>   # porta 26101
 sdb devices                # deve listar a Q80
 ```
 
@@ -51,7 +51,7 @@ sdb devices                # deve listar a Q80
 O certificado de distribuidor expira. Quando a instalação falhar com erro de certificado:
 1. Abra o **Certificate Manager** (`~/tizen-studio/tools/certificate-manager`), entre com a conta Samsung e crie um novo certificado de distribuidor, marcando o DUID acima.
 2. Aponte o perfil `mtvtv` para o novo certificado (Certificate Manager, aba de perfis) ou crie outro e passe `CERT_PROFILE=<nome>` aos scripts.
-3. Rebuilde (`build-wgt.sh`) e reinstale (`install-tv.sh`). Se der conflito com a versão instalada, rode `tizen uninstall -p mtvtv00001.MtvTv -s 192.168.0.13:26101` e instale de novo.
+3. Rebuilde (`build-wgt.sh`) e reinstale (`install-tv.sh`). Se der conflito com a versão instalada, rode `tizen uninstall -p mtvtv00001.MtvTv -s <ip-da-tv>:26101` e instale de novo.
 
 ## Problemas conhecidos
 

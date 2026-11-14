@@ -29,7 +29,7 @@ retornar algo diferente de `true` faz a Activity sair.
 5. No Mac, rode:
 
    ```bash
-   android/scripts/install-tv.sh 192.168.0.50      # porta padrão 5555
+   android/scripts/install-tv.sh <ip-da-tv>      # ou TV_IP=<ip-da-tv>; porta padrão 5555
    ```
 
    O script compila `../web/` com `pnpm build`, usa temporariamente o resultado em `app/src/main/assets/web/`, compila (`./gradlew assembleDebug`), instala com `adb install -r` e abre o app. Ao terminar ou falhar, restaura os assets versionados.
