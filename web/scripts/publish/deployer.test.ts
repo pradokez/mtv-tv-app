@@ -27,7 +27,6 @@ function fakeGit(remote: Record<string, string> = {}, fail?: (args: string[]) =>
         .join("");
     }
     if (args[0] === "commit" && opts?.cwd) committed.push(readdirSync(opts.cwd).filter((f) => f !== ".git").sort());
-    if (args[0] === "rev-parse") return "c0ffee\n";
     return "";
   };
   const git = (name: string) => calls.filter((c) => c.args[0] === name);
@@ -213,7 +212,7 @@ describe("gitDeployer", () => {
     );
 
     it("fetches the tag and force-pushes its commit to gh-pages", async () => {
-      const { run, git } = fakeGit();
+      const { run, git } = fakeGit({ "refs/tags/site-20261114-153000": "c0ffee", "refs/heads/gh-pages": "beef" });
 
       await gitDeployer({ run, remote: REMOTE, warn: () => {} }).promote("site-20261114-153000");
 
@@ -223,13 +222,22 @@ describe("gitDeployer", () => {
       expect(git("push")[0]?.args).toEqual(["push", "--force", REMOTE, "c0ffee:refs/heads/gh-pages"]);
     });
 
-    it("explains a tag that does not exist", async () => {
-      const { run, git } = fakeGit({}, (args) => args[0] === "fetch");
+    it("explains a tag that does not exist, without fetching or pushing", async () => {
+      const { run, git } = fakeGit(tagRefs("site-20261113-090000"));
 
       await expect(
         gitDeployer({ run, remote: REMOTE, warn: () => {} }).promote("site-20261114-153000"),
       ).rejects.toThrow(/tag site-20261114-153000 não encontrada.*pnpm publish:list/);
+      expect(git("fetch")).toEqual([]);
       expect(git("push")).toEqual([]);
+    });
+
+    it("reports a remote it cannot reach as such, not as a missing tag", async () => {
+      const { run } = fakeGit({}, (args) => args[0] === "ls-remote");
+
+      await expect(
+        gitDeployer({ run, remote: REMOTE, warn: () => {} }).promote("site-20261114-153000"),
+      ).rejects.toThrow(/ls-remote saiu com código 1/);
     });
   });
 });

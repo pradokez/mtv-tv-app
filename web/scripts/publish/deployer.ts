@@ -139,14 +139,13 @@ export function gitDeployer({
       // The tag goes into git arguments: only names we create are accepted.
       if (!TAG_PATTERN.test(tag)) throw new PublishError(`tag inválida: ${tag} (formato site-AAAAMMDD-HHMMSS)`);
       await inTempRepo(async (cwd) => {
+        // Looked up first, so a network or auth failure is not reported as a missing tag.
+        const release = (await remoteState(cwd)).releases.find((r) => r.tag === tag);
+        if (!release) throw new PublishError(`tag ${tag} não encontrada: veja pnpm publish:list`);
         await git(cwd, "init", "-q");
-        try {
-          await git(cwd, "fetch", "--depth", "1", remote, `refs/tags/${tag}:refs/tags/${tag}`);
-        } catch {
-          throw new PublishError(`tag ${tag} não encontrada: veja pnpm publish:list`);
-        }
-        const sha = (await git(cwd, "rev-parse", `refs/tags/${tag}^{commit}`)).trim();
-        await git(cwd, "push", "--force", remote, `${sha}:refs/heads/${BRANCH}`);
+        // The push needs the commit locally; one level of history is enough.
+        await git(cwd, "fetch", "--depth", "1", remote, `refs/tags/${tag}:refs/tags/${tag}`);
+        await git(cwd, "push", "--force", remote, `${release.sha}:refs/heads/${BRANCH}`);
       });
     },
   };
