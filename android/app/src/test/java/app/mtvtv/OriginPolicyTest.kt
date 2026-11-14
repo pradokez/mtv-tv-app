@@ -73,6 +73,24 @@ class OriginPolicyTest {
     }
 
     @Test
+    fun recusaCaminhoCodificadoQueEscapaDoToken() {
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev/tok123%2F..%2Foutro"))
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev/x%2F..%2Ftok123/a"))
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev/tok123/%2e%2e/outro"))
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev/tok123/%2E./outro"))
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev/tok123/a%5Cb"))
+        assertFalse(policy.canCallExitApp("https://mtv.example.pages.dev/tok123/%2e%2e/outro"))
+        assertTrue(policy.canNavigate("https://mtv.example.pages.dev/tok123/a%20b.html"))
+    }
+
+    @Test
+    fun recusaHostComPontoFinalOuNaoAscii() {
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev./tok123"))
+        assertFalse(policy.canNavigate("https://www.youtube.com./embed/abc"))
+        assertFalse(policy.canNavigate("https://mtv.exämple.pages.dev/tok123"))
+    }
+
+    @Test
     fun ignoraMaiusculasNoEsquemaENoHost() {
         assertTrue(policy.canNavigate("HTTPS://MTV.Example.Pages.Dev/tok123/"))
         assertTrue(policy.canNavigate("https://mtv.example.pages.dev:443/tok123/"))
