@@ -3,7 +3,7 @@ import {
   type ChannelSnapshot,
   type CommercialSnapshot,
   type VideoSnapshot,
-} from "./schema";
+} from "./schema.ts";
 
 export interface Catalog {
   /** Playable channels, sorted by `order`. Channels with no known video are omitted. */
