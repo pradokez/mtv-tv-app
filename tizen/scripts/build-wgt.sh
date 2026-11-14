@@ -2,7 +2,7 @@
 # Gera o .wgt assinado com o perfil Samsung (padrão: mtvtv).
 # Uso: tizen/scripts/build-wgt.sh [--test|--app]
 #   --test  página de teste (navigator.userAgent), sem catálogo (padrão)
-#   --app   lançador local (tizen/launcher) que abre a URL hospedada de config/hosted.json; sem app nem catálogo no pacote
+#   --app   (LAUNCH_QUERY="?debug=1" acrescenta a query à URL) lançador local (tizen/launcher) que abre a URL hospedada de config/hosted.json; sem app nem catálogo no pacote
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -24,6 +24,10 @@ cp -R "$SRC/." "$STAGE/"
 cp "$TIZEN_DIR/icon.png" "$STAGE/"
 # config.js leva a URL hospedada ao lançador (só no --app; o --test não usa).
 [ "$MODE" = "--app" ] && node "$REPO_DIR/web/scripts/hosted-config.ts" launcher-config > "$STAGE/config.js"
+# LAUNCH_QUERY (ex.: "?debug=1") vai no fim da URL do lançador: abre o app com o overlay de diagnóstico, sem commitar nada.
+if [ "$MODE" = "--app" ] && [ -n "${LAUNCH_QUERY:-}" ]; then
+  sed -i.bak "s|\";\$|${LAUNCH_QUERY}\";|" "$STAGE/config.js" && rm "$STAGE/config.js.bak"
+fi
 # config.xml sai do modelo + config/hosted.json (versionado); falha se faltar o arquivo.
 node "$REPO_DIR/web/scripts/hosted-config.ts" tizen-config $CONFIG_FLAG > "$STAGE/config.xml"
 
