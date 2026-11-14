@@ -1,0 +1,56 @@
+{
+  "version": "site-20261114-220606",
+  "minShell": 1,
+  "files": [
+    {
+      "path": "assets/chakra-petch-latin-500-normal-BR1ody1F.woff2",
+      "sha256": "36ad966cb653de70ba37355c41003b02de8940b2df6cbcd46480a6ad8cadd65d",
+      "size": 9956
+    },
+    {
+      "path": "assets/chakra-petch-latin-500-normal-CnUQnZ4D.woff",
+      "sha256": "4cd37544eb0dc46b75fd44315570bdcbf3fd0dc5e1286514518fd9f2c8bae556",
+      "size": 13408
+    },
+    {
+      "path": "assets/chakra-petch-latin-600-normal-DQKfcdKo.woff",
+      "sha256": "8e64347841a0995e991c888d1a8618ac88b11655f48d2083bd4b6a5f958f6947",
+      "size": 13432
+    },
+    {
+      "path": "assets/chakra-petch-latin-600-normal-DVQm9bgb.woff2",
+      "sha256": "a5888696e9eb1b4bbbecc8eb3922b8369f49d4bddb72263e033cbd17f399be76",
+      "size": 9968
+    },
+    {
+      "path": "assets/chakra-petch-latin-700-normal-CnDBPjkL.woff2",
+      "sha256": "ce5095dc1cb200aaa939e38067a0677018d10e9f26ec38cdcf1557ac524fc775",
+      "size": 9900
+    },
+    {
+      "path": "assets/chakra-petch-latin-700-normal-D1s_c2du.woff",
+      "sha256": "ebff5565a21091177d1a15326e959db4e51b324851d4ba13ee45398d06d9116f",
+      "size": 13332
+    },
+    {
+      "path": "assets/index-DB4sisRO.js",
+      "sha256": "1f2ff1c72f07f82f71e89550df74434dd4b0b9d9b4205981946debae9b82c2c7",
+      "size": 26884
+    },
+    {
+      "path": "assets/style-CMoXKAlf.css",
+      "sha256": "ac674dcd42711b7621690abf64fe5cda9957203f32af63ed1394b95d2e7972cb",
+      "size": 7599
+    },
+    {
+      "path": "catalog.json",
+      "sha256": "145972c0b2be458b44f786b212665d63551127599f2a09ff8367cf5ad67c281b",
+      "size": 12149335
+    },
+    {
+      "path": "index.html",
+      "sha256": "a0e872c015e1a769f0c7922ef300d5c0513b11f51191732e703a133d238ed638",
+      "size": 1215
+    }
+  ]
+}
