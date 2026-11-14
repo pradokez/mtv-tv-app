@@ -13,11 +13,12 @@ REPO_DIR="$(cd .. && pwd)"
 
 MODE="${1:---test}"
 case "$MODE" in
-  --test) SRC="$TIZEN_DIR/test-page" ;;
+  --test) SRC="$TIZEN_DIR/test-page"; CONFIG_FLAG="--test" ;;
   --app)
     echo "Compilando o app web para Chromium 69..."
     (cd "$REPO_DIR/web" && pnpm build:tizen)
     SRC="$REPO_DIR/web/dist-tizen"
+    CONFIG_FLAG=""
     ;;
   *) echo "Uso: $0 [--test|--app]" >&2; exit 1 ;;
 esac
@@ -25,7 +26,9 @@ esac
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp -R "$SRC/." "$STAGE/"
-cp "$TIZEN_DIR/config.xml" "$TIZEN_DIR/icon.png" "$STAGE/"
+cp "$TIZEN_DIR/icon.png" "$STAGE/"
+# config.xml sai do modelo + config/hosted.local.json (URL secreta fora do git); falha se faltar o arquivo.
+node "$REPO_DIR/web/scripts/hosted-config.ts" tizen-config $CONFIG_FLAG > "$STAGE/config.xml"
 
 OUT="$TIZEN_DIR/build"
 rm -rf "$OUT"

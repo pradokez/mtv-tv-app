@@ -4,7 +4,7 @@ Empacota o app web como `.wgt` e instala na Samsung QN55Q80TAGXZD (Tizen 5.5) po
 
 | Arquivo | Para quê |
 | --- | --- |
-| `config.xml` | Manifesto: id `mtvtv00001.MtvTv`, tela cheia, privilégios `internet`, `network.get`, `power` e `tv.inputdevice` |
+| `config.template.xml` | Modelo do manifesto (o `config.xml` é gerado no build, ver [Configuração por build](#configuração-por-build)): id `mtvtv00001.MtvTv`, tela cheia, privilégios `internet`, `network.get`, `power` e `tv.inputdevice` |
 | `icon.png` | Ícone |
 | `test-page/` | Página mínima que mostra `navigator.userAgent` (primeiro marco) |
 | `scripts/build-wgt.sh` | Gera o `.wgt` assinado em `tizen/build/`; falha se o pacote sair sem assinatura |
@@ -81,3 +81,11 @@ Medido na TV real em 2026-11-08, com o app completo. Para ler o console sem `sdb
 | iframe do YouTube em `file://` | **Erro 153** (configuração do player) em todo vídeo: o iframe depende do `Referer` da página e `file://` não tem; `origin` e `widget_referrer` https passados nos `playerVars` não resolvem | **Em aberto**: precisa de uma origem http(s) (ver a issue de acompanhamento) |
 
 Com o app servido por http (testado a partir do Mac), o 153 some, o que confirma a causa.
+
+## Configuração por build
+
+A URL do app hospedado (domínio + token) nunca vai para o git. Ela vive em `config/hosted.local.json` (ignorado); copie `config/hosted.example.json` e preencha `domain` (só o domínio, ex.: `meu-app.pages.dev`) e `token`. A URL é `https://<domain>/<token>/`.
+
+- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com a URL e `<access>` só para o domínio hospedado e o YouTube (nada de `*`). Sem o arquivo local, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
+- A Android lê a mesma URL no build como `BuildConfig.APP_URL`.
+- `web/scripts/hosted-config.test.ts` falha se o domínio ou o token aparecerem em qualquer arquivo versionado.
