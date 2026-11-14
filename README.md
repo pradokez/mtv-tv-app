@@ -148,7 +148,7 @@ pnpm test        # Vitest
 pnpm typecheck   # tsc estrito
 pnpm build       # typecheck + build em web/dist/
 pnpm catalog     # gera o catálogo real (exige YOUTUBE_API_KEY)
-pnpm publish:site  # builda e publica no Cloudflare Pages (ver "Publicar o site")
+pnpm publish:site  # builda e publica no GitHub Pages (ver "Publicar o site")
 ```
 
 - **Tela cheia no Mac:** ⌃⌘F no navegador. O app ocupa a janela inteira e não usa a Fullscreen API, que exige um gesto do usuário.
@@ -170,28 +170,22 @@ pnpm publish:site  # builda e publica no Cloudflare Pages (ver "Publicar o site"
 
 ## Publicar o site
 
-O app é hospedado no Cloudflare Pages, na raiz do domínio (`https://<projeto>.pages.dev/`), para o player do YouTube ter uma origem https. O site é público: sem caminho secreto nem `noindex`. Tudo roda da sua máquina, em `web/`; nada disso passa por git ou CI.
+O app é hospedado no GitHub Pages (`https://<owner>.github.io/<repo>/`), para o player do YouTube ter uma origem https. O site é público: sem caminho secreto nem `noindex`. Tudo roda da sua máquina, em `web/`, com a autenticação do git/`gh` que você já usa no `origin`; não há token nem arquivo de configuração para guardar, e nada disso passa por CI.
 
-**Uma vez:** crie o projeto no Pages com `pnpm exec wrangler pages project create <projeto> --production-branch main` (pede `pnpm exec wrangler login`, ou use um API token) e crie `web/.publish.local` (ignorado pelo git), uma chave por linha:
+A publicação é um commit órfão (sem histórico) enviado com force-push para a branch `gh-pages`, a partir de uma pasta temporária: o seu repositório local não é tocado. Cada publicação ganha a tag `site-AAAAMMDD-HHMMSS` (UTC).
 
-```bash
-# CLOUDFLARE_API_TOKEN: permissão Cloudflare Pages: Edit
-PAGES_PROJECT=<projeto>
-CLOUDFLARE_API_TOKEN=<api token>
-CLOUDFLARE_ACCOUNT_ID=<id da conta>
-```
-
-As mesmas chaves podem vir de variáveis de ambiente, que têm prioridade sobre o arquivo. O API token nunca vai para arquivo versionado (um teste falha se o configurado aparecer em algum).
+**Uma vez:** em Settings → Pages do repositório, escolha "Deploy from a branch", branch `gh-pages` e pasta `/ (root)`. Não ponha proteção de branch na `gh-pages`, senão o force-push é recusado.
 
 ```bash
 pnpm catalog            # o catálogo real precisa estar em public/catalog.json
-pnpm publish:site       # builda (build:tizen), confere e publica dist-tizen/; imprime a URL
-pnpm publish:list       # lista os deploys de produção, com os ids
-pnpm publish:rollback <id>  # volta para um deploy anterior (pela API do Cloudflare)
+pnpm publish:site       # builda (build:tizen), confere e publica dist-tizen/; imprime a URL e a tag
+pnpm publish:list       # lista as publicações (tags), a mais recente primeiro; marca a que está no ar
+pnpm publish:rollback <tag>  # volta para uma publicação anterior (tags em publish:list)
 ```
 
 - **Guardas:** o `publish:site` falha, sem enviar nada, se `public/catalog.json` faltar, for o catálogo de exemplo ou for pequeno demais (menos de 10 canais ou 1.000 vídeos), ou se o `dist-tizen/` gerado não tiver o `index.html` e o catálogo real.
-- **Rollback:** cada deploy fica guardado no Cloudflare; `publish:rollback` promove um anterior a produção. Um deploy quebrado derruba as duas TVs até o rollback.
+- **Catálogo real:** ele só existe na branch `gh-pages` e nas tags; nunca entra na `main`.
+- **Rollback:** `publish:rollback <tag>` republica o commit da tag na `gh-pages`. Ficam as 5 tags mais recentes (mais a que está no ar); as mais antigas são apagadas a cada publicação. Uma publicação quebrada derruba as duas TVs até o rollback.
 
 ## Contrato com a casca (Android ou Tizen)
 
