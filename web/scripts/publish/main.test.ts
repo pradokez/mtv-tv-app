@@ -2,46 +2,28 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { Deployer } from "./deployer.ts";
-import { loadConfig, runCommand } from "./main.ts";
+import type { Deployer, Release } from "./deployer.ts";
+import { runCommand } from "./main.ts";
+import { PublishError } from "./guards.ts";
 import { fakeCatalog, writeTree } from "./test-helpers.ts";
 
 const example = readFileSync(new URL("../../fixtures/catalog.example.json", import.meta.url), "utf8");
 
-function fakeDeployer() {
+function fakeDeployer(releases: Release[] = []) {
   const calls: string[][] = [];
   const deployer: Deployer = {
-    deploy: async (dir) => void calls.push(["deploy", dir]),
-    list: async () => void calls.push(["list"]),
-    promote: async (id) => void calls.push(["promote", id]),
+    deploy: async (dir) => {
+      calls.push(["deploy", dir]);
+      return { tag: "site-20261114-153000" };
+    },
+    list: async () => {
+      calls.push(["list"]);
+      return releases;
+    },
+    promote: async (tag) => void calls.push(["promote", tag]),
   };
   return { deployer, calls };
 }
-
-describe("loadConfig", () => {
-  it("reads KEY=value lines and lets the environment win", () => {
-    const file = "# comentário\nPAGES_PROJECT=mtv-tv\n\nCLOUDFLARE_ACCOUNT_ID = do-arquivo \n";
-
-    expect(loadConfig(file, { CLOUDFLARE_ACCOUNT_ID: "do-ambiente", HOME: "/x" })).toEqual({
-      PAGES_PROJECT: "mtv-tv",
-      CLOUDFLARE_ACCOUNT_ID: "do-ambiente",
-    });
-  });
-
-  it("drops quotes and trailing comments, as a shell would", () => {
-    const file = "PAGES_PROJECT=\"mtv-tv\"\nCLOUDFLARE_API_TOKEN=abc # permissão Pages: Edit\nCLOUDFLARE_ACCOUNT_ID='id'\n";
-
-    expect(loadConfig(file, {})).toEqual({
-      PAGES_PROJECT: "mtv-tv",
-      CLOUDFLARE_API_TOKEN: "abc",
-      CLOUDFLARE_ACCOUNT_ID: "id",
-    });
-  });
-
-  it("works without the local file", () => {
-    expect(loadConfig(undefined, { PAGES_PROJECT: "p" })).toEqual({ PAGES_PROJECT: "p" });
-  });
-});
 
 describe("runCommand", () => {
   let webRoot: string;
@@ -65,28 +47,29 @@ describe("runCommand", () => {
     });
   }
 
-  function run(argv: string[], config: Record<string, string>, deployer: Deployer) {
+  const remote = "git@github.com:pradokez/mtv-tv-app.git";
+
+  function run(argv: string[], deployer: Deployer, remoteUrl = remote) {
     const log = (line: string) => void output.push(line);
-    return runCommand(argv, { config, deployer, build, webRoot, log, error: log });
+    return runCommand(argv, { remote: remoteUrl, deployer, build, webRoot, log, error: log });
   }
 
-  const config = { PAGES_PROJECT: "mtv-tv" };
-
-  it("builds and deploys the tizen build once, then prints the URL at the root of the domain", async () => {
+  it("builds and deploys the tizen build once, then prints the Pages URL and the tag", async () => {
     const { deployer, calls } = fakeDeployer();
 
-    expect(await run(["publish"], config, deployer)).toBe(0);
+    expect(await run(["publish"], deployer)).toBe(0);
 
     expect(built).toBe(1);
     expect(calls).toEqual([["deploy", join(webRoot, "dist-tizen")]]);
-    expect(output).toContain("https://mtv-tv.pages.dev/");
+    expect(output.join("\n")).toMatch(/site-20261114-153000/);
+    expect(output).toContain("https://pradokez.github.io/mtv-tv-app/");
   });
 
   it("fails before building without the real catalog", async () => {
     rmSync(join(webRoot, "public/catalog.json"));
     const { deployer, calls } = fakeDeployer();
 
-    expect(await run(["publish"], config, deployer)).toBe(1);
+    expect(await run(["publish"], deployer)).toBe(1);
 
     expect(output.join("\n")).toMatch(/catálogo real não encontrado/);
     expect(built).toBe(0);
@@ -97,18 +80,18 @@ describe("runCommand", () => {
     writeTree(webRoot, { "public/catalog.json": example });
     const { deployer, calls } = fakeDeployer();
 
-    expect(await run(["publish"], config, deployer)).toBe(1);
+    expect(await run(["publish"], deployer)).toBe(1);
 
     expect(output.join("\n")).toMatch(/catálogo de exemplo/);
     expect(calls).toEqual([]);
   });
 
-  it("fails without the project", async () => {
+  it("fails before building when the remote is not on GitHub", async () => {
     const { deployer, calls } = fakeDeployer();
 
-    expect(await run(["publish"], {}, deployer)).toBe(1);
+    expect(await run(["publish"], deployer, "git@gitlab.com:o/r.git")).toBe(1);
 
-    expect(output.join("\n")).toMatch(/PAGES_PROJECT/);
+    expect(output.join("\n")).toMatch(/não é do GitHub/);
     expect(built).toBe(0);
     expect(calls).toEqual([]);
   });
@@ -121,29 +104,61 @@ describe("runCommand", () => {
     };
     const log = (line: string) => void output.push(line);
 
-    expect(await runCommand(["publish"], { config, deployer, build: brokenBuild, webRoot, log, error: log })).toBe(1);
+    expect(await runCommand(["publish"], { remote, deployer, build: brokenBuild, webRoot, log, error: log })).toBe(1);
 
     expect(output.join("\n")).toMatch(/dist-tizen\/catalog.json é o catálogo de exemplo/);
     expect(calls).toEqual([]);
   });
 
-  it("lists deployments and promotes the one given", async () => {
+  it("lists the publications and marks the live one", async () => {
+    const { deployer, calls } = fakeDeployer([
+      { tag: "site-20261114-153000", current: false },
+      { tag: "site-20261113-090000", current: true },
+    ]);
+
+    expect(await run(["list"], deployer)).toBe(0);
+
+    expect(output).toEqual(["site-20261114-153000", "site-20261113-090000  (no ar)"]);
+    expect(calls).toEqual([["list"]]);
+    expect(built).toBe(0);
+  });
+
+  it("says so when there is no publication yet", async () => {
+    const { deployer } = fakeDeployer();
+
+    expect(await run(["list"], deployer)).toBe(0);
+
+    expect(output).toEqual(["nenhuma publicação"]);
+  });
+
+  it("promotes the tag given on rollback", async () => {
     const { deployer, calls } = fakeDeployer();
 
-    expect(await run(["deploys"], config, deployer)).toBe(0);
-    expect(await run(["rollback", "0a1b-2c3d"], config, deployer)).toBe(0);
+    expect(await run(["rollback", "site-20261113-090000"], deployer)).toBe(0);
 
-    expect(calls).toEqual([["list"], ["promote", "0a1b-2c3d"]]);
+    expect(calls).toEqual([["promote", "site-20261113-090000"]]);
+    expect(output.join("\n")).toMatch(/site-20261113-090000.*https:\/\/pradokez\.github\.io\/mtv-tv-app\//);
     expect(built).toBe(0);
+  });
+
+  it("reports a deployer failure and exits 1", async () => {
+    const { deployer } = fakeDeployer();
+    deployer.promote = async () => {
+      throw new PublishError("tag site-1 não encontrada");
+    };
+
+    expect(await run(["rollback", "site-1"], deployer)).toBe(1);
+
+    expect(output).toEqual(["Publicação falhou: tag site-1 não encontrada"]);
   });
 
   it("explains how to use rollback and unknown commands", async () => {
     const { deployer, calls } = fakeDeployer();
 
-    expect(await run(["rollback"], config, deployer)).toBe(1);
-    expect(await run(["outro"], config, deployer)).toBe(1);
+    expect(await run(["rollback"], deployer)).toBe(1);
+    expect(await run(["outro"], deployer)).toBe(1);
 
-    expect(output.join("\n")).toMatch(/pnpm publish:rollback <id>/);
+    expect(output.join("\n")).toMatch(/pnpm publish:rollback <tag>/);
     expect(calls).toEqual([]);
   });
 });

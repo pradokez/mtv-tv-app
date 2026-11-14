@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "catalog": "node scripts/catalog-builder/main.ts",
     "publish:site": "node scripts/publish/main.ts publish",
-    "publish:list": "node scripts/publish/main.ts deploys",
+    "publish:list": "node scripts/publish/main.ts list",
     "publish:rollback": "node scripts/publish/main.ts rollback"
   },
   "devDependencies": {
