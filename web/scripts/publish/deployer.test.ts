@@ -80,7 +80,7 @@ describe("gitDeployer", () => {
       const { tag } = await gitDeployer({ run, remote: REMOTE, now, warn: () => {} }).deploy(dir);
 
       expect(tag).toBe("site-20261114-153000");
-      expect(committed).toEqual([[".nojekyll", "assets", "index.html"]]);
+      expect(committed).toEqual([[".nojekyll", "assets", "index.html", "manifest.json"]]);
       expect(git("push")[0]?.args).toEqual([
         "push", "--atomic", "--force", REMOTE, "HEAD:refs/heads/gh-pages", "refs/tags/site-20261114-153000",
       ]);

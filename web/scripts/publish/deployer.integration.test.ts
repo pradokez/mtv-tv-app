@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -50,7 +51,7 @@ describe("gitDeployer with a real git remote", () => {
     expect(originGit("rev-list", "--count", "gh-pages")).toBe("1");
     expect(originGit("rev-list", "--parents", "-n", "1", "gh-pages").split(" ")).toHaveLength(1);
     expect(originGit("ls-tree", "--name-only", "gh-pages").split("\n").sort()).toEqual([
-      ".nojekyll", "catalog.json", "index.html",
+      ".nojekyll", "catalog.json", "index.html", "manifest.json",
     ]);
     expect(originGit("show", "gh-pages:index.html")).toBe("<html>v2</html>");
     expect(originGit("tag", "--list").split("\n")).toEqual([first.tag, second.tag]);
@@ -58,6 +59,19 @@ describe("gitDeployer with a real git remote", () => {
       { tag: second.tag, current: true },
       { tag: first.tag, current: false },
     ]);
+    expect(readdirSync(dist).sort()).toEqual(["catalog.json", "index.html"]);
+  });
+
+  it("publishes a manifest.json whose version is the tag and whose hashes match the files", async () => {
+    const deployer = gitDeployer({ run, remote: origin, now: clock(), warn: () => {} });
+
+    const { tag } = await deployer.deploy(dist);
+
+    const manifest = JSON.parse(originGit("show", "gh-pages:manifest.json"));
+    expect(manifest.version).toBe(tag);
+    expect(manifest.files.map((f: { path: string }) => f.path)).toEqual(["catalog.json", "index.html"]);
+    expect(manifest.files[1].sha256).toBe(createHash("sha256").update("<html></html>").digest("hex"));
+    // The build folder itself stays untouched.
     expect(readdirSync(dist).sort()).toEqual(["catalog.json", "index.html"]);
   });
 
