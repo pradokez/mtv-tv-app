@@ -28,6 +28,16 @@ describe("loadConfig", () => {
     });
   });
 
+  it("drops quotes and trailing comments, as a shell would", () => {
+    const file = "PAGES_PROJECT=\"mtv-tv\"\nCLOUDFLARE_API_TOKEN=abc # permissão Pages: Edit\nCLOUDFLARE_ACCOUNT_ID='id'\n";
+
+    expect(loadConfig(file, {})).toEqual({
+      PAGES_PROJECT: "mtv-tv",
+      CLOUDFLARE_API_TOKEN: "abc",
+      CLOUDFLARE_ACCOUNT_ID: "id",
+    });
+  });
+
   it("works without the local file", () => {
     expect(loadConfig(undefined, { PAGES_PROJECT: "p" })).toEqual({ PAGES_PROJECT: "p" });
   });

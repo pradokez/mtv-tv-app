@@ -27,8 +27,10 @@ type Config = Partial<Record<(typeof KEYS)[number], string>>;
 export function loadConfig(fileText: string | undefined, env: Record<string, string | undefined>): Config {
   const fromFile: Record<string, string> = {};
   for (const line of (fileText ?? "").split("\n")) {
-    const match = /^\s*([A-Z_]+)\s*=\s*(.*?)\s*$/.exec(line);
-    if (match?.[1] && match[2] !== undefined) fromFile[match[1]] = match[2];
+    // `KEY=value`, `KEY="value"` or `KEY=value # comment`, like a shell would read it.
+    const match = /^\s*([A-Z_]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s#]*))\s*(?:#.*)?$/.exec(line);
+    const value = match && (match[2] ?? match[3] ?? match[4]);
+    if (match?.[1] && value) fromFile[match[1]] = value;
   }
   const config: Config = {};
   for (const key of KEYS) {
