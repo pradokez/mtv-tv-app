@@ -1,6 +1,6 @@
 # Esquema do snapshot do catálogo — v1
 
-O app web lê o catálogo de `catalog.json`, ao lado do `index.html` no build. O snapshot real é gerado pelo Catalog Builder (`pnpm catalog`) em `web/public/catalog.json`, que nunca é commitado. Sem ele, o dev server e o build usam o catálogo de exemplo `web/fixtures/catalog.example.json`.
+O app web lê o catálogo de `catalog.json`, ao lado do `index.html` no build. O snapshot real é gerado pelo Catalog Builder (`pnpm catalog`) em `web/public/catalog.json`, que nunca é commitado, mas é publicado abertamente na branch `gh-pages` pelo `pnpm publish:site` (ver [Publicar o site](../../README.md#publicar-o-site)). Sem ele, o dev server e o build usam o catálogo de exemplo `web/fixtures/catalog.example.json`.
 
 Os tipos TypeScript em [`src/catalog/schema.ts`](../src/catalog/schema.ts) são a fonte da verdade. Este documento os descreve.
 

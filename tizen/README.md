@@ -100,3 +100,11 @@ O endereço do app hospedado vive em `config/hosted.json` (versionado: o site é
 
 - `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com o lançador (`index.html`, que lê a URL do `config.js`) e `<access>` só para o domínio hospedado e o YouTube (a Tizen restringe por origem, então o caminho não entra no `<access>`) (nada de `*`). Sem o arquivo, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
 - A Android lê a mesma URL no build como `BuildConfig.APP_URL`.
+
+## Publicar e rollback
+
+A Q80 abre o app do GitHub Pages: o `content src` do widget é a URL de `config/hosted.json`. Os comandos ficam no [README](../README.md#publicar-o-site): `pnpm publish:site`, `pnpm publish:list` e `pnpm publish:rollback <tag>` (rodam em `web/`).
+
+- Depois de publicar ou de fazer rollback, basta reabrir o app na TV. Não precisa reinstalar.
+- Reinstale (`build-wgt.sh --app` e `install-tv.sh`) só se mudar o `config/hosted.json`, o manifesto ou o certificado.
+- Uma publicação quebrada quebra o app na TV até o rollback.
