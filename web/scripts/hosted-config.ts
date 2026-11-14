@@ -10,12 +10,18 @@ export const CONFIG_PATH =
   process.env.HOSTED_CONFIG_PATH ?? fileURLToPath(new URL("../../config/hosted.json", import.meta.url));
 const TIZEN_TEMPLATE_PATH = fileURLToPath(new URL("../../tizen/config.template.xml", import.meta.url));
 
-// The only other origins the shells may reach: the YouTube player and its assets.
+// Video streams come from rotating hosts (rr3---sn-xxxx.googlevideo.com):
+// only this origin is allowed with its subdomains.
+const VIDEO_STREAMS_ORIGIN = "https://googlevideo.com";
+
+// The only other origins the shells may reach: the YouTube player, its assets
+// and its video streams.
 const YOUTUBE_ORIGINS = [
   "https://www.youtube.com",
   "https://www.youtube-nocookie.com",
   "https://i.ytimg.com",
   "https://s.ytimg.com",
+  VIDEO_STREAMS_ORIGIN,
 ];
 
 export interface HostedConfig {
@@ -73,7 +79,9 @@ export function tizenOptionsFor(config: HostedConfig): TizenConfigOptions {
 
 /** Fills the checked-in config.xml template (placeholders __CONTENT_SRC__ and __ACCESS__). */
 export function renderTizenConfig(template: string, { contentSrc, accessOrigins }: TizenConfigOptions): string {
-  const access = accessOrigins.map((origin) => `<access origin="${origin}" subdomains="false"/>`).join("\n  ");
+  const access = accessOrigins
+    .map((origin) => `<access origin="${origin}" subdomains="${origin === VIDEO_STREAMS_ORIGIN}"/>`)
+    .join("\n  ");
   return template.replace("__CONTENT_SRC__", contentSrc).replace("__ACCESS__", access);
 }
 

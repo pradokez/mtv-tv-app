@@ -142,6 +142,11 @@ describe("generated Tizen config.xml", () => {
     expect(origins.every((o) => o?.startsWith("https://"))).toBe(true);
   });
 
+  it("allows the video streams, served from rotating *.googlevideo.com hosts (seen on the Q80: without it no chunk loads)", () => {
+    expect(xml).toContain('<access origin="https://googlevideo.com" subdomains="true"/>');
+    expect(xml).toContain('<access origin="https://www.youtube.com" subdomains="false"/>');
+  });
+
   it("allows every YouTube origin the web app's CSP allows", () => {
     const html = readFileSync(join(repoRoot, "web", "index.html"), "utf8");
     const cspOrigins = new Set(html.match(/https:\/\/[a-z0-9.-]*(youtube|ytimg)[a-z0-9.-]*/g));
