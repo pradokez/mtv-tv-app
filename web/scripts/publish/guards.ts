@@ -81,14 +81,14 @@ export function checkStaged(dir: string, token: string, exampleText: string): vo
   if (!existsSync(index)) {
     throw new PublishError(`o app não está no caminho secreto: falta ${token.slice(0, 4)}…/index.html`);
   }
-  const outside = readdirSync(dir, { recursive: true, encoding: "utf8" }).filter(
-    (file) => file.endsWith("index.html") && !file.startsWith(`${token}/`),
-  );
+  const files = readdirSync(dir, { recursive: true, encoding: "utf8" });
+  const outside = files.filter((file) => file.endsWith("index.html") && !file.startsWith(`${token}/`));
   if (outside.length > 0) {
     throw new PublishError(`index.html fora do caminho secreto: ${outside.join(", ")}`);
   }
-  if (existsSync(join(dir, "robots.txt"))) {
-    throw new PublishError("robots.txt no site publicado revelaria o caminho secreto: remova-o");
+  const robots = files.filter((file) => /(^|\/)robots\.txt$/.test(file));
+  if (robots.length > 0) {
+    throw new PublishError(`robots.txt no site publicado revelaria o caminho secreto: remova ${robots.join(", ")}`);
   }
 
   const headersFile = join(dir, "_headers");

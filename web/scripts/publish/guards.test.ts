@@ -87,6 +87,10 @@ describe("checkStaged", () => {
     expect(() => check({ "robots.txt": `User-agent: *\nDisallow: /${TOKEN}/` })).toThrow(/robots.txt/);
   });
 
+  it("fails with a robots.txt inside the secret path too", () => {
+    expect(() => check({ [`${TOKEN}/robots.txt`]: "User-agent: *" })).toThrow(/robots.txt/);
+  });
+
   it("fails when the staged catalog is not the real one", () => {
     expect(() => check({ [`${TOKEN}/catalog.json`]: example })).toThrow(/catálogo de exemplo/);
   });
