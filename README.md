@@ -176,7 +176,7 @@ O app é hospedado no GitHub Pages (`https://<owner>.github.io/<repo>/`), para o
 
 A publicação é um commit órfão (sem histórico) enviado com force-push para a branch `gh-pages`, a partir de uma pasta temporária: o seu repositório local não é tocado. Cada publicação ganha a tag `site-AAAAMMDD-HHMMSS` (UTC).
 
-**Risco assumido:** o catálogo é a curadoria do criador do site de origem, e a publicação o deixa público na internet (na `gh-pages` e nas tags). Não verifiquei se o criador permite redistribuí-lo. Assumo esse risco; se ele pedir a remoção, é preciso tirar a publicação do ar.
+**Risco assumido:** o catálogo é a curadoria do criador do site de origem, e a publicação o deixa público na internet (na `gh-pages` e nas tags). A permissão do criador para redistribuí-lo não foi verificada. O risco é assumido; se ele pedir a remoção, é preciso tirar a publicação do ar (apagar a `gh-pages` e as tags `site-*`).
 
 **Endereço:** a URL e o caminho vêm de `config/hosted.json` (`domain` + `path`) e precisam bater com o `<owner>/<repo>` do `origin`, senão o site publicado não é o que as TVs abrem.
 
@@ -191,9 +191,9 @@ pnpm publish:rollback <tag>  # volta para uma publicação anterior (tags em pub
 
 - **Guardas:** o `publish:site` falha, sem enviar nada, se `public/catalog.json` faltar, for o catálogo de exemplo ou for pequeno demais (menos de 10 canais ou 1.000 vídeos), ou se o `dist-tizen/` gerado não tiver o `index.html` e o catálogo real.
 - **Catálogo real:** ele só existe na branch `gh-pages` e nas tags; nunca entra na `main`.
-- **Rollback:** `publish:rollback <tag>` republica o commit da tag na `gh-pages`. Ficam as 5 tags mais recentes (mais a que está no ar); as mais antigas são apagadas a cada publicação. Uma publicação quebrada derruba as duas TVs até o rollback.
+- **Retenção:** ficam as 5 tags mais recentes (mais a que está no ar); as mais antigas são apagadas a cada publicação.
 
-**Rollback, passo a passo:**
+**Rollback, passo a passo:** `publish:rollback <tag>` republica o commit da tag na `gh-pages`. Uma publicação quebrada derruba o app na Samsung até o rollback (na TCL, só depois da #64).
 
 1. Liste as publicações. A que está no ar vem marcada:
 
