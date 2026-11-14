@@ -1,26 +1,26 @@
 /**
- * Publishes the app to Cloudflare Pages under a secret path:
+ * Publishes the app to Cloudflare Pages, at the root of the domain (the site
+ * is public):
  *
  * - `pnpm publish:site`: checks the real catalog, runs `pnpm build:tizen`,
- *   stages `dist-publish/<token>/` with `noindex`, checks it again and
- *   deploys. Prints `https://<project>.pages.dev/<token>/`.
+ *   checks `dist-tizen/` again and deploys it. Prints
+ *   `https://<project>.pages.dev/`.
  * - `pnpm publish:list`: lists the production deployments.
  * - `pnpm publish:rollback <id>`: makes an old deployment the live one.
  *
  * Settings come from `web/.publish.local` (git-ignored, `KEY=value` lines) or
- * the environment, which wins: `PAGES_PROJECT`, `PUBLISH_TOKEN`,
- * `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. The token is never written
- * to a committed file; the catalog never goes through git, CI or a secret.
+ * the environment, which wins: `PAGES_PROJECT`, `CLOUDFLARE_API_TOKEN`,
+ * `CLOUDFLARE_ACCOUNT_ID`. The API token is never written to a committed
+ * file; the catalog never goes through git, CI or a secret.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnRunner, wranglerDeployer, type Deployer } from "./deployer.ts";
-import { checkCatalog, checkStaged, checkToken, PublishError } from "./guards.ts";
-import { stage } from "./stage.ts";
+import { checkBuild, checkCatalog, PublishError, readIfExists } from "./guards.ts";
 
-const KEYS = ["PAGES_PROJECT", "PUBLISH_TOKEN", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"] as const;
+const KEYS = ["PAGES_PROJECT", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"] as const;
 type Config = Partial<Record<(typeof KEYS)[number], string>>;
 
 /** `fileText` is `web/.publish.local` (`undefined` when absent); `env` wins over it. */
@@ -49,7 +49,6 @@ type Deps = {
 };
 
 async function publish({ config, deployer, build, webRoot, log }: Deps): Promise<void> {
-  const token = checkToken(config.PUBLISH_TOKEN);
   const project = config.PAGES_PROJECT;
   if (!project) {
     throw new PublishError("defina PAGES_PROJECT (em web/.publish.local ou na variável de ambiente) com o projeto do Cloudflare Pages");
@@ -57,22 +56,16 @@ async function publish({ config, deployer, build, webRoot, log }: Deps): Promise
   const example = readFileSync(join(webRoot, "fixtures/catalog.example.json"), "utf8");
   const catalog = join(webRoot, "public/catalog.json");
   // Before building: without the real catalog, vite would ship the example.
-  checkCatalog(existsSync(catalog) ? readFileSync(catalog, "utf8") : undefined, example);
+  checkCatalog(readIfExists(catalog), example);
 
   await build();
-  const out = join(webRoot, "dist-publish");
-  stage({ build: join(webRoot, "dist-tizen"), out, token });
-  checkStaged(out, token, example);
+  const out = join(webRoot, "dist-tizen");
+  checkBuild(out, example);
   await deployer.deploy(out);
 
   log("");
   log("Publicado em:");
-  log(`https://${project}.pages.dev/${token}/`);
-  log("");
-  log(
-    "Atenção: deploys antigos continuam acessíveis pela URL própria de cada um (<id>.<projeto>.pages.dev) " +
-      "com o token da época. Ao trocar o token, apague-os (veja o README).",
-  );
+  log(`https://${project}.pages.dev/`);
 }
 
 /** Returns the exit code. */
@@ -95,7 +88,7 @@ export async function runCommand(argv: string[], deps: Deps): Promise<number> {
 if (import.meta.main) {
   const webRoot = fileURLToPath(new URL("../..", import.meta.url));
   const localFile = join(webRoot, ".publish.local");
-  const config = loadConfig(existsSync(localFile) ? readFileSync(localFile, "utf8") : undefined, process.env);
+  const config = loadConfig(readIfExists(localFile), process.env);
   const env: Record<string, string> = {};
   if (config.CLOUDFLARE_API_TOKEN) env.CLOUDFLARE_API_TOKEN = config.CLOUDFLARE_API_TOKEN;
   if (config.CLOUDFLARE_ACCOUNT_ID) env.CLOUDFLARE_ACCOUNT_ID = config.CLOUDFLARE_ACCOUNT_ID;

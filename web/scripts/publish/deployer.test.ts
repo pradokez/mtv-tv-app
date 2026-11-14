@@ -14,12 +14,12 @@ describe("wranglerDeployer", () => {
   it("deploys the folder to the production branch of the project", async () => {
     const { run, calls } = recorder();
 
-    await wranglerDeployer({ project: "mtv-tv", run, env: credentials }).deploy("dist-publish");
+    await wranglerDeployer({ project: "mtv-tv", run, env: credentials }).deploy("dist-tizen");
 
     expect(calls).toEqual([
       {
         command: "pnpm",
-        args: ["exec", "wrangler", "pages", "deploy", "dist-publish", "--project-name", "mtv-tv", "--branch", "main", "--commit-dirty=true"],
+        args: ["exec", "wrangler", "pages", "deploy", "dist-tizen", "--project-name", "mtv-tv", "--branch", "main", "--commit-dirty=true"],
         env: credentials,
       },
     ]);

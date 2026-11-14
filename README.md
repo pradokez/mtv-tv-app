@@ -157,7 +157,7 @@ pnpm publish:site  # builda e publica no Cloudflare Pages (ver "Publicar o site"
 
 ## Catálogo de canais
 
-`pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site de origem e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git e nunca deve ser commitado nem passar por CI ou secret (a curadoria é do criador do site); ele só sai da sua máquina pelo `pnpm publish:site`, sob o caminho secreto e com `noindex` (ver [Publicar o site](#publicar-o-site)). O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
+`pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site de origem e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git e nunca deve ser commitado nem passar por CI ou secret (a curadoria é do criador do site); ele só sai da sua máquina pelo `pnpm publish:site`, que o publica abertamente junto com o site (ver [Publicar o site](#publicar-o-site)). A permissão de redistribuição pelo criador do site de origem não foi verificada. O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
 
 **Comerciais:** a lista de comerciais dos intervalos é curada à mão em [`web/curadoria/comerciais-br.json`](web/curadoria/comerciais-br.json) (versionada, ao contrário do snapshot). O `pnpm catalog` lê esse arquivo, valida duração e embed de cada comercial junto com os clipes e grava o que sobrar no campo `commercials` do snapshot; eles não viram canal. Para trocar a lista, edite o JSON (`id`, `brand`, `title`, `year`) e rode `pnpm catalog` de novo. O relatório mostra quantos comerciais ficaram e quantos foram descartados.
 
@@ -169,30 +169,28 @@ pnpm publish:site  # builda e publica no Cloudflare Pages (ver "Publicar o site"
 
 ## Publicar o site
 
-O app é hospedado no Cloudflare Pages sob um caminho secreto (`https://<projeto>.pages.dev/<token>/`), sem indexação, para o player do YouTube ter uma origem https. Tudo roda da sua máquina, em `web/`; nada disso passa por git ou CI.
+O app é hospedado no Cloudflare Pages, na raiz do domínio (`https://<projeto>.pages.dev/`), para o player do YouTube ter uma origem https. O site é público: sem caminho secreto nem `noindex`. Tudo roda da sua máquina, em `web/`; nada disso passa por git ou CI.
 
-**Uma vez:** crie o projeto no Pages com `pnpm exec wrangler pages project create <projeto> --production-branch main` (pede `pnpm exec wrangler login`, ou use um API token) e crie `web/.publish.local` (ignorado pelo git) com:
+**Uma vez:** crie o projeto no Pages com `pnpm exec wrangler pages project create <projeto> --production-branch main` (pede `pnpm exec wrangler login`, ou use um API token) e crie `web/.publish.local` (ignorado pelo git), uma chave por linha:
 
 ```bash
+# CLOUDFLARE_API_TOKEN: permissão Cloudflare Pages: Edit
 PAGES_PROJECT=<projeto>
-PUBLISH_TOKEN=<token>            # ex.: openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
-CLOUDFLARE_API_TOKEN=<api token> # permissão Cloudflare Pages: Edit
+CLOUDFLARE_API_TOKEN=<api token>
 CLOUDFLARE_ACCOUNT_ID=<id da conta>
 ```
 
-As mesmas chaves podem vir de variáveis de ambiente, que têm prioridade sobre o arquivo. O token nunca vai para arquivo versionado (um teste falha se o configurado aparecer em algum).
+As mesmas chaves podem vir de variáveis de ambiente, que têm prioridade sobre o arquivo. O API token nunca vai para arquivo versionado (um teste falha se o configurado aparecer em algum).
 
 ```bash
 pnpm catalog            # o catálogo real precisa estar em public/catalog.json
-pnpm publish:site       # builda (build:tizen), monta, confere e publica; imprime a URL
+pnpm publish:site       # builda (build:tizen), confere e publica dist-tizen/; imprime a URL
 pnpm publish:list       # lista os deploys de produção, com os ids
 pnpm publish:rollback <id>  # volta para um deploy anterior (pela API do Cloudflare)
 ```
 
-- **Guardas:** o `publish:site` falha, sem enviar nada, se `public/catalog.json` faltar, for o catálogo de exemplo ou for pequeno demais (menos de 10 canais ou 1.000 vídeos), se `PUBLISH_TOKEN` faltar ou tiver menos de 32 caracteres (só letras, dígitos, `_` e `-`), ou se o site montado em `web/dist-publish/` não tiver o app só em `<token>/`, o cabeçalho `X-Robots-Tag: noindex` (arquivo `_headers`), a meta `robots` `noindex` no `index.html` ou tiver algum `robots.txt` (ele revelaria o caminho).
-- **Raiz vazia:** fora de `<token>/` só ficam `_headers` e um `404.html`; a raiz do domínio não mostra nada.
-- **Trocar o token:** mude `PUBLISH_TOKEN` e rode `pnpm publish:site`. O app passa a ficar só no caminho novo no deploy vigente; a URL antiga deixa de funcionar no domínio do projeto.
-- **Deploys antigos:** cada deploy continua acessível pela própria URL (`<id>.<projeto>.pages.dev`) com o token da época. Depois de trocar o token, apague-os: `pnpm exec wrangler pages deployment delete <id> --project-name <projeto>` (ids em `pnpm publish:list`). Um rollback para um deploy antigo volta também o token antigo.
+- **Guardas:** o `publish:site` falha, sem enviar nada, se `public/catalog.json` faltar, for o catálogo de exemplo ou for pequeno demais (menos de 10 canais ou 1.000 vídeos), ou se o `dist-tizen/` gerado não tiver o `index.html` e o catálogo real.
+- **Rollback:** cada deploy fica guardado no Cloudflare; `publish:rollback` promove um anterior a produção. Um deploy quebrado derruba as duas TVs até o rollback.
 
 ## Contrato com a casca (Android ou Tizen)
 

@@ -1,7 +1,6 @@
 node_modules/
 dist/
 web/dist-tizen/
-web/dist-publish/
 .DS_Store
 web/public/catalog.json
 web/.cache/

@@ -2,8 +2,8 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { checkCatalog, checkStaged, checkToken } from "./guards.ts";
-import { fakeCatalog, stagedTree, TOKEN, writeTree } from "./test-helpers.ts";
+import { checkBuild, checkCatalog } from "./guards.ts";
+import { fakeCatalog, writeTree } from "./test-helpers.ts";
 
 const example = readFileSync(new URL("../../fixtures/catalog.example.json", import.meta.url), "utf8");
 
@@ -24,7 +24,8 @@ describe("checkCatalog with a generated catalog", () => {
     expect(() => checkCatalog(fakeCatalog(20, 10), example)).toThrow(/200 vídeos/);
   });
 
-  it("fails when the catalog is not valid for the app", () => {
+  it("fails when the catalog is not JSON or not valid for the app", () => {
+    expect(() => checkCatalog("{", example)).toThrow(/não é um JSON válido/);
     expect(() => checkCatalog(JSON.stringify({ schemaVersion: 99 }), example)).toThrow(/esquema v99/);
   });
 
@@ -33,71 +34,32 @@ describe("checkCatalog with a generated catalog", () => {
   });
 });
 
-describe("checkToken", () => {
-  it("fails without a secret path", () => {
-    expect(() => checkToken(undefined)).toThrow(/PUBLISH_TOKEN/);
-    expect(() => checkToken("")).toThrow(/PUBLISH_TOKEN/);
-  });
-
-  it("fails for a short or guessable token", () => {
-    expect(() => checkToken("abc123")).toThrow(/32 caracteres/);
-    expect(() => checkToken(`${"a".repeat(31)}/`)).toThrow(/32 caracteres/);
-  });
-
-  it("returns a long random token", () => {
-    expect(checkToken("Xk3_9-qv7LpZ2mN8rT4wY6bC1dF5gH0j")).toBe("Xk3_9-qv7LpZ2mN8rT4wY6bC1dF5gH0j");
-  });
-});
-
-describe("checkStaged", () => {
+describe("checkBuild", () => {
   let dir: string;
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "publish-"));
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  function check(files: Record<string, string | undefined>): void {
-    const tree = { ...stagedTree(), ...files };
-    writeTree(dir, Object.fromEntries(Object.entries(tree).filter(([, v]) => v !== undefined)) as Record<string, string>);
-    checkStaged(dir, TOKEN, example);
-  }
+  const app = { "index.html": "<html></html>", "assets/index.js": "1" };
 
-  it("passes when the app is under the secret path with noindex everywhere", () => {
-    expect(() => check({})).not.toThrow();
+  it("passes when the build has the app at its root and the real catalog", () => {
+    writeTree(dir, { ...app, "catalog.json": fakeCatalog(20, 100) });
+
+    expect(() => checkBuild(dir, example)).not.toThrow();
   });
 
-  it("fails when the app is not under the secret path", () => {
-    expect(() => check({ [`${TOKEN}/index.html`]: undefined })).toThrow(/caminho secreto/);
+  it("fails when the build has no index.html", () => {
+    writeTree(dir, { "catalog.json": fakeCatalog(20, 100) });
+
+    expect(() => checkBuild(dir, example)).toThrow(/index.html não existe/);
   });
 
-  it("fails when index.html is also at the root", () => {
-    expect(() => check({ "index.html": "<html></html>" })).toThrow(/fora do caminho secreto/);
-  });
+  it("fails when the build shipped the example catalog or none", () => {
+    writeTree(dir, app);
+    expect(() => checkBuild(dir, example)).toThrow(/catálogo real não encontrado em .*catalog.json/);
 
-  it("fails without the noindex header", () => {
-    expect(() => check({ _headers: undefined })).toThrow(/_headers/);
-    expect(() => check({ _headers: "/*\n  X-Frame-Options: DENY\n" })).toThrow(/X-Robots-Tag: noindex/);
-  });
-
-  it("fails without the noindex meta tag", () => {
-    expect(() => check({ [`${TOKEN}/index.html`]: "<html><head></head></html>" })).toThrow(/meta robots/);
-  });
-
-  it("fails with a robots.txt, which would reveal the path", () => {
-    expect(() => check({ "robots.txt": `User-agent: *\nDisallow: /${TOKEN}/` })).toThrow(/robots.txt/);
-  });
-
-  it("fails with a robots.txt inside the secret path too", () => {
-    expect(() => check({ [`${TOKEN}/robots.txt`]: "User-agent: *" })).toThrow(/robots.txt/);
-  });
-
-  it("fails when the staged catalog is not the real one", () => {
-    expect(() => check({ [`${TOKEN}/catalog.json`]: example })).toThrow(/catálogo de exemplo/);
-  });
-
-  it("fails when the page loads assets from the site root, outside the secret path", () => {
-    expect(() =>
-      check({ [`${TOKEN}/index.html`]: '<head><meta name="robots" content="noindex"><script src="/assets/index.js"></script></head>' }),
-    ).toThrow(/caminho absoluto/);
+    writeTree(dir, { "catalog.json": example });
+    expect(() => checkBuild(dir, example)).toThrow(/catalog.json é o catálogo de exemplo/);
   });
 });
