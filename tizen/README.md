@@ -94,11 +94,37 @@ Medido na TV real em 2026-11-08, com o app completo. Para ler o console sem `sdb
 
 Com o app servido por http (testado a partir do Mac), o 153 some, o que confirma a causa.
 
+## Primeiro boot pela URL hospedada (issue #67)
+
+Medido na Q80 real em 2026-11-14, com o `.wgt` do `build-wgt.sh --app` (lançador que abre `https://pradokez.github.io/mtv-tv-app/`), instalado por `install-tv.sh` sobre o app antigo (mesmo id), depois de confirmar com o dono. Sem console na TV, o diagnóstico usou o overlay `?debug=1` (ver [Diagnóstico na tela](#diagnóstico-na-tela-debug1)).
+
+| Passo | Observado |
+| --- | --- |
+| Lançador → URL hospedada | Abre a interface do app, sem tela branca nem aviso de falha. Origem `https://pradokez.github.io`, iframe do YouTube em 1920x1080 |
+| Erro 153 | Não aparece: a origem https resolve |
+| Vídeo, 1ª tentativa | Área preta. O player recebe os dados do vídeo (duração, 5 qualidades) e as legendas aparecem, mas `getVideoLoadedFraction()` fica em 0 e o estado volta de buffering (3) para não iniciado (-1), sem código de erro. Nem mudo nem com `playVideo` depois de uma tecla |
+| Causa | Os pedaços do vídeo vêm de hosts rotativos `*.googlevideo.com`, fora dos `<access>`: a Tizen bloqueia em silêncio, inclusive pedidos de dentro do iframe |
+| Correção | `<access origin="https://googlevideo.com" subdomains="true"/>` (`hosted-config.ts`). Reinstalado: **o canal toca sozinho** |
+| API `tizen` | `undefined` na página hospedada, mesmo 3 s depois: o app cai em `platform browser` (sem Sair pelo Voltar, sem manter a tela acesa, sem registrar teclas extras). Acompanhado em issue própria |
+
+Ruído conhecido: o script do YouTube gera `Uncaught SecurityError: Blocked a frame ... from accessing a cross-origin frame` a cada 10–15 s. Não afeta a reprodução.
+
+### Diagnóstico na tela (`?debug=1`)
+
+Com `?debug=1` na URL, o app mostra num canto: origem, plataforma, userAgent, se a API `tizen` existe, erros, violações de CSP, `console.error` e o player do YouTube (estado, tempo, fração carregada, duração e qualidades a cada 3 s; tamanho e `allow` do iframe). Mensagens repetidas viram uma linha com contador. Para abrir o app assim na TV, gere o pacote com a query e reinstale (o `tizen run` com o app aberto não recarrega):
+
+```bash
+LAUNCH_QUERY="?debug=1" tizen/scripts/build-wgt.sh --app
+tizen/scripts/install-tv.sh <ip-da-tv>
+```
+
+Depois, volte ao pacote normal (`build-wgt.sh --app` sem a variável) e reinstale. Se a instalação travar no `vd_appinstall` por minutos, encerre e rode de novo.
+
 ## Configuração por build
 
 O endereço do app hospedado vive em `config/hosted.json` (versionado: o site é público, o endereço não é segredo). Ele tem `domain` (só o domínio, ex.: `meu-usuario.github.io`) e `path` (o caminho base, começa e termina com `/`, ex.: `/mtv-tv-app/`; `/` se o app estiver na raiz do domínio). O GitHub Pages serve um repositório em `https://<usuário>.github.io/<repo>/`, por isso o caminho. A URL é `https://<domain><path>`.
 
-- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com o lançador (`index.html`, que lê a URL do `config.js`) e `<access>` só para o domínio hospedado e o YouTube (a Tizen restringe por origem, então o caminho não entra no `<access>`) (nada de `*`). Sem o arquivo, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
+- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com o lançador (`index.html`, que lê a URL do `config.js`) e `<access>` só para o domínio hospedado, o YouTube e os hosts de vídeo `*.googlevideo.com` (a Tizen restringe por origem, então o caminho não entra no `<access>`) (nada de `*`). Sem o arquivo, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
 - A Android lê a mesma URL no build como `BuildConfig.APP_URL`.
 
 ## Publicar e rollback
