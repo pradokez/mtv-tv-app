@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -25,29 +25,57 @@ function writeConfig(content: unknown): string {
 
 const sample = { domain: "meu-app.pages.dev", token: "s3gr3d0-abc" };
 
+function runCli(args: string[], configPath: string): { status: number | null; stdout: string; stderr: string } {
+  const { status, stdout, stderr } = spawnSync("node", [cli, ...args], {
+    env: { ...process.env, HOSTED_CONFIG_PATH: configPath },
+    encoding: "utf8",
+  });
+  return { status, stdout, stderr };
+}
+
 describe("hosted URL", () => {
   it("joins domain and token into an https URL", () => {
     expect(hostedUrl(sample)).toBe("https://meu-app.pages.dev/s3gr3d0-abc/");
   });
 
   it("is what the Android build receives", () => {
-    const out = execFileSync("node", [cli, "android-url"], {
-      env: { ...process.env, HOSTED_CONFIG_PATH: writeConfig(sample) },
-    }).toString();
-    expect(out).toBe(hostedUrl(sample));
+    const { status, stdout } = runCli(["android-url"], writeConfig(sample));
+    expect(status).toBe(0);
+    expect(stdout).toBe(hostedUrl(sample));
   });
 
   it("makes the Android build fail with a clear message when the file is missing", () => {
-    let stderr = "";
-    try {
-      execFileSync("node", [cli, "android-url"], {
-        env: { ...process.env, HOSTED_CONFIG_PATH: "/nao/existe.json" },
-        stdio: "pipe",
-      });
-    } catch (error) {
-      stderr = String((error as { stderr: Buffer }).stderr);
-    }
+    const { status, stderr } = runCli(["android-url"], "/nao/existe.json");
+    expect(status).not.toBe(0);
     expect(stderr).toMatch(/hosted\.example\.json/);
+  });
+});
+
+describe("tizen-config CLI (used by build-wgt.sh)", () => {
+  it("prints the config.xml pointing at the hosted URL", () => {
+    const { status, stdout } = runCli(["tizen-config"], writeConfig(sample));
+    expect(status).toBe(0);
+    expect(stdout).toBe(renderTizenConfig(template, tizenOptionsFor(sample)));
+  });
+
+  it("fails with a clear message when the file is missing", () => {
+    const { status, stdout, stderr } = runCli(["tizen-config"], "/nao/existe.json");
+    expect(status).not.toBe(0);
+    expect(stdout).toBe("");
+    expect(stderr).toMatch(/hosted\.example\.json/);
+  });
+
+  it("builds the local test page without the hosted file", () => {
+    const { status, stdout } = runCli(["tizen-config", "--test"], "/nao/existe.json");
+    expect(status).toBe(0);
+    expect(stdout).toContain('<content src="index.html"/>');
+    expect(stdout).not.toMatch(/__[A-Z_]+__|origin="\*"/);
+  });
+
+  it("rejects an unknown command", () => {
+    const { status, stderr } = runCli(["nope"], writeConfig(sample));
+    expect(status).not.toBe(0);
+    expect(stderr).toMatch(/Uso:/);
   });
 });
 
@@ -88,6 +116,14 @@ describe("generated Tizen config.xml", () => {
     expect(origins).toContain("https://www.youtube.com");
     expect(origins).not.toContain("*");
     expect(origins.every((o) => o?.startsWith("https://"))).toBe(true);
+  });
+
+  it("allows every YouTube origin the web app's CSP allows", () => {
+    const html = readFileSync(join(repoRoot, "web", "index.html"), "utf8");
+    const cspOrigins = new Set(html.match(/https:\/\/[a-z0-9.-]*(youtube|ytimg)[a-z0-9.-]*/g));
+    const origins = [...xml.matchAll(/<access origin="([^"]+)"/g)].map((m) => m[1]);
+    expect(cspOrigins.size).toBeGreaterThan(0);
+    for (const origin of cspOrigins) expect(origins).toContain(origin);
   });
 
   it("keeps the secret token out of <access>", () => {
