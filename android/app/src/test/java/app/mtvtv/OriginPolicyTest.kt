@@ -1,0 +1,119 @@
+package app.mtvtv
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Test
+
+class OriginPolicyTest {
+
+    private val policy = OriginPolicy("https://mtv.example.pages.dev/")
+
+    @Test
+    fun permiteNavegarParaOAppHospedado() {
+        assertTrue(policy.canNavigate("https://mtv.example.pages.dev"))
+        assertTrue(policy.canNavigate("https://mtv.example.pages.dev/"))
+        assertTrue(policy.canNavigate("https://mtv.example.pages.dev/index.html?a=1#x"))
+        assertTrue(policy.canNavigate("https://mtv.example.pages.dev/catalog.json"))
+    }
+
+    @Test
+    fun permiteNavegarParaOPlayerDoYoutube() {
+        assertTrue(policy.canNavigate("https://www.youtube.com/embed/abc"))
+        assertTrue(policy.canNavigate("https://www.youtube-nocookie.com/embed/abc"))
+    }
+
+    @Test
+    fun recusaDominiosParecidosComOHospedado() {
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev.evil.com"))
+        assertFalse(policy.canNavigate("https://evil-mtv.example.pages.dev"))
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev@evil.com"))
+        assertFalse(policy.canNavigate("https://evil.com@mtv.example.pages.dev"))
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev:8443"))
+    }
+
+    @Test
+    fun recusaDominiosParecidosComOYoutube() {
+        assertFalse(policy.canNavigate("https://youtube.com.evil.com/embed/abc"))
+        assertFalse(policy.canNavigate("https://www.youtube.com.evil.com/embed/abc"))
+        assertFalse(policy.canNavigate("https://m.youtube.com/embed/abc"))
+        assertFalse(policy.canNavigate("https://www.youtube.com@evil.com/embed/abc"))
+    }
+
+    @Test
+    fun recusaEsquemasQueNaoSejamHttps() {
+        assertFalse(policy.canNavigate("http://mtv.example.pages.dev"))
+        assertFalse(policy.canNavigate("http://www.youtube.com/embed/abc"))
+        assertFalse(policy.canNavigate("file:///android_asset/web/index.html"))
+        assertFalse(policy.canNavigate("javascript:alert(1)"))
+        assertFalse(policy.canNavigate("data:text/html,<h1>oi</h1>"))
+        assertFalse(policy.canNavigate("about:blank"))
+    }
+
+    @Test
+    fun recusaUrlNulaVaziaOuMalformadaSemLancarExcecao() {
+        assertFalse(policy.canNavigate(null))
+        assertFalse(policy.canNavigate(""))
+        assertFalse(policy.canNavigate("   "))
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev /x"))
+        assertFalse(policy.canNavigate("https://"))
+        assertFalse(policy.canNavigate("não é url"))
+        assertFalse(policy.canCallExitApp(null))
+        assertFalse(policy.canCallExitApp("https://mtv.example.pages.dev/a b"))
+    }
+
+    @Test
+    fun recusaHostComPontoFinalOuNaoAscii() {
+        assertFalse(policy.canNavigate("https://mtv.example.pages.dev."))
+        assertFalse(policy.canNavigate("https://www.youtube.com./embed/abc"))
+        assertFalse(policy.canNavigate("https://mtv.exämple.pages.dev"))
+    }
+
+    @Test
+    fun ignoraMaiusculasNoEsquemaENoHost() {
+        assertTrue(policy.canNavigate("HTTPS://MTV.Example.Pages.Dev/"))
+        assertTrue(policy.canNavigate("https://mtv.example.pages.dev:443/"))
+        assertTrue(policy.canNavigate("https://WWW.YouTube.com/embed/abc"))
+    }
+
+    @Test
+    fun soOAppHospedadoPodeChamarExitApp() {
+        assertTrue(policy.canCallExitApp("https://mtv.example.pages.dev/"))
+        assertTrue(policy.canCallExitApp("https://mtv.example.pages.dev/index.html#x"))
+        assertFalse(policy.canCallExitApp("https://www.youtube.com/embed/abc"))
+        assertFalse(policy.canCallExitApp("https://www.youtube-nocookie.com/embed/abc"))
+        assertFalse(policy.canCallExitApp("https://evil.com"))
+        assertFalse(policy.canCallExitApp("http://mtv.example.pages.dev"))
+        assertFalse(policy.canCallExitApp("file:///android_asset/web/index.html"))
+        assertFalse(policy.canCallExitApp("javascript:MtvTv.exitApp()"))
+    }
+
+    @Test
+    fun aceitaBaseComOuSemBarraFinal() {
+        val semBarra = OriginPolicy("https://mtv.example.pages.dev")
+        assertTrue(semBarra.canNavigate("https://mtv.example.pages.dev/a"))
+        assertFalse(semBarra.canNavigate("https://evil.com/a"))
+    }
+
+    @Test
+    fun construtorRecusaBaseInvalida() {
+        val invalidas = listOf(
+            "",
+            "não é url",
+            "http://mtv.example.pages.dev",
+            "file://",
+            "https://",
+            "https://mtv.example.pages.dev/caminho",
+            "https://usuario@mtv.example.pages.dev",
+            "https://mtv.example.pages.dev:8443",
+        )
+        for (base in invalidas) {
+            try {
+                OriginPolicy(base)
+                fail("devia recusar a base: '$base'")
+            } catch (esperado: IllegalArgumentException) {
+                // ok
+            }
+        }
+    }
+}
