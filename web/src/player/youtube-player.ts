@@ -18,6 +18,8 @@ interface YTPlayer {
   getPlayerState(): number;
   getCurrentTime?(): number;
   getVideoLoadedFraction?(): number;
+  getDuration?(): number;
+  getAvailableQualityLevels?(): string[];
   setPlaybackQuality?(quality: string): void;
   destroy(): void;
 }
@@ -110,7 +112,9 @@ export function createYouTubePlayer(
     const unmute = () => {
       muted = false;
       autoplayKnownOk = true;
+      debugLog("tecla: unMute e playVideo");
       player?.unMute();
+      player?.playVideo();
       hint.hide();
     };
     window.addEventListener("keydown", unmute, { once: true, capture: true });
@@ -151,7 +155,7 @@ export function createYouTubePlayer(
           debugLog("player pronto");
           clock.setTimeout(() => {
             const frame = container.querySelector("iframe")?.getBoundingClientRect();
-            debugLog(`iframe ${frame ? `${Math.round(frame.width)}x${Math.round(frame.height)}` : "ausente"}`);
+            debugLog(`iframe ${frame ? `${Math.round(frame.width)}x${Math.round(frame.height)}` : "ausente"} allow="${container.querySelector("iframe")?.getAttribute("allow")}"`);
           }, 4000);
           player = instance;
           if (debugActive()) pollForDebug();
@@ -186,7 +190,9 @@ export function createYouTubePlayer(
       if (player) {
         const time = player.getCurrentTime?.().toFixed(1);
         const loaded = player.getVideoLoadedFraction?.().toFixed(2);
-        debugLog(`estado ${player.getPlayerState()} t=${time} carregado=${loaded}`);
+        const duration = player.getDuration?.().toFixed(0);
+        const qualities = player.getAvailableQualityLevels?.().length;
+        debugLog(`estado ${player.getPlayerState()} t=${time} carregado=${loaded} dur=${duration} qual=${qualities}`);
       }
       clock.setTimeout(tick, 3000);
     };
