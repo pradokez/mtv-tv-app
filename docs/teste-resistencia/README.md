@@ -40,9 +40,7 @@ em uso longo. Se acontecerem, as correções previstas na issue são limitar a q
 
 ```bash
 export PATH="/opt/homebrew/share/android-commandlinetools/platform-tools:$PATH"
-cd web && pnpm catalog && pnpm build        # catálogo real (não commitar) e build
-rm -rf ../android/app/src/main/assets/web && mkdir -p ../android/app/src/main/assets/web
-cp -R dist/. ../android/app/src/main/assets/web/
+cd web && pnpm catalog && pnpm publish:site  # catálogo real (não commitar) e publicação: a TCL abre o site
 cd ../android && scripts/install-tv.sh <ip>:5555
 scripts/sample-memory.sh <ip>:5555 ../docs/teste-resistencia/memoria.csv 60   # uma amostra por minuto
 scripts/zap-loop.sh <ip>:5555 15                                                # CH+ a cada 15 s

@@ -80,31 +80,24 @@ Veja [Catálogo de canais](#catálogo-de-canais) para o que o comando faz e quan
 
 ### 3. Instalar na TV (Android TV)
 
-Testado em uma TCL C06 (Android 11).
+Testado em uma TCL C06 (Android 11). O APK só tem a casca: o app web e o catálogo vêm do site publicado (ver [Publicar o site](#publicar-o-site)), então não precisa de `pnpm build` nem do catálogo local para instalar.
 
-1. Para instalar com canais reais, gere o catálogo antes:
-
-   ```bash
-   cd web && YOUTUBE_API_KEY=sua-chave pnpm catalog
-   ```
-
-   O `web/public/catalog.json` fica local e é ignorado pelo git. Sem ele, o script avisa que usará o catálogo de exemplo de 2 canais.
-2. **Libere o modo desenvolvedor na TV:** em **Configurações → Sistema → Sobre**, aperte OK sete vezes em **Build do Android TV**.
-3. Em **Configurações → Sistema → Opções do desenvolvedor**, ligue **Depuração USB** e **Depuração por rede/ADB sobre rede** (o nome varia entre versões).
-4. Veja o IP da TV em **Configurações → Rede e Internet**. Mac e TV precisam estar na mesma rede.
-5. **Compile e instale:**
+1. **Libere o modo desenvolvedor na TV:** em **Configurações → Sistema → Sobre**, aperte OK sete vezes em **Build do Android TV**.
+2. Em **Configurações → Sistema → Opções do desenvolvedor**, ligue **Depuração USB** e **Depuração por rede/ADB sobre rede** (o nome varia entre versões).
+3. Veja o IP da TV em **Configurações → Rede e Internet**. Mac e TV precisam estar na mesma rede.
+4. **Compile e instale:**
 
    ```bash
    android/scripts/install-tv.sh <ip-da-tv>      # ou TV_IP=<ip-da-tv>; porta padrão 5555
    ```
 
-   O script compila o app web com `pnpm build`, empacota o catálogo presente, compila o APK (`./gradlew assembleDebug`), instala com `adb install -r` e abre o app. Os assets temporários são restaurados ao terminar, inclusive se o build falhar.
-6. Na primeira conexão a TV pergunta "Permitir depuração?". Escolha **Sempre permitir** e rode o script de novo se precisar.
-7. O app aparece na linha de apps da tela inicial, com banner e ícone próprios.
+   O script compila o APK (`./gradlew assembleDebug`), instala com `adb install -r` e abre o app, que carrega a URL de `config/hosted.json`. Sem internet ou com o site fora do ar, a casca mostra um aviso e tenta de novo sozinha (ver [`android/README.md`](android/README.md#aviso-de-falha-e-nova-tentativa)).
+5. Na primeira conexão a TV pergunta "Permitir depuração?". Escolha **Sempre permitir** e rode o script de novo se precisar.
+6. O app aparece na linha de apps da tela inicial, com banner e ícone próprios.
 
 Para um emulador Android TV já aberto, use `android/scripts/install-tv.sh --device emulator-5554` (e, se a instalação travar, `adb shell settings put global package_verifier_enable 0`).
 
-> O snapshot real nunca entra no git, mas é publicado abertamente no GitHub Pages pelo `pnpm publish:site` (ver [Publicar o site](#publicar-o-site)). Hoje o `install-tv.sh` da Android ainda o empacota no APK local, e restaura o placeholder versionado depois da compilação. Isso muda com a #64.
+> O snapshot real nunca entra no git nem no APK: ele é publicado abertamente no GitHub Pages pelo `pnpm publish:site` (ver [Publicar o site](#publicar-o-site)).
 
 ## Como usar
 
@@ -193,7 +186,7 @@ pnpm publish:rollback <tag>  # volta para uma publicação anterior (tags em pub
 - **Catálogo real:** ele só existe na branch `gh-pages` e nas tags; nunca entra na `main`.
 - **Retenção:** ficam as 5 tags mais recentes (mais a que está no ar); as mais antigas são apagadas a cada publicação.
 
-**Rollback, passo a passo:** `publish:rollback <tag>` republica o commit da tag na `gh-pages`. Uma publicação quebrada derruba o app na Samsung até o rollback (na TCL, só depois da #64).
+**Rollback, passo a passo:** `publish:rollback <tag>` republica o commit da tag na `gh-pages`. Uma publicação quebrada derruba o app nas duas TVs até o rollback.
 
 1. Liste as publicações. A que está no ar vem marcada:
 
@@ -215,16 +208,16 @@ pnpm publish:rollback <tag>  # volta para uma publicação anterior (tags em pub
 **O que muda em cada TV:**
 
 - **Samsung (Tizen):** o `content src` do widget é a URL hospedada. Depois de publicar ou de fazer rollback, basta reabrir o app, sem reinstalar. Ver [`tizen/README.md`](tizen/README.md#publicar-e-rollback).
-- **TCL (Android):** até a #64 o APK carrega o build empacotado nele, então publicar não muda nada ali. Para atualizar, reinstale com `android/scripts/install-tv.sh`. Ver [`android/README.md`](android/README.md#publicar-e-rollback).
+- **TCL (Android):** a casca carrega `BuildConfig.APP_URL`, a URL de `config/hosted.json`. Depois de publicar ou de fazer rollback, basta reabrir o app, sem reinstalar. Ver [`android/README.md`](android/README.md#publicar-e-rollback).
 
 ## Contrato com a casca (Android ou Tizen)
 
 O app roda dentro de uma casca: Android (WebView) ou Tizen. Só `web/src/platform/platform.ts` conhece a casca: ele detecta a plataforma (`window.MtvTv` na Android, `tizen` na Tizen, senão navegador) e expõe `kind`, `exitApp()` e `autoplayAllowed`. O resto do app consome essa interface. Na Tizen a detecção já existe, com autoplay permitido; a saída real e o registro de teclas ficam para outras issues.
 
 - **Build:** `pnpm build` gera `web/dist/` (`index.html`, `assets/`, `catalog.json`), com caminhos relativos.
-- **Origem:** sirva o build pelo `WebViewAssetLoader` (`https://appassets.androidplatform.net/assets/web/index.html`), não por `file://`. O app carrega o catálogo com `fetch`, que não funciona em `file://`, e o player do YouTube exige uma origem HTTP(S).
+- **Origem:** as duas cascas abrem o site publicado no GitHub Pages (`https://<domínio><caminho>`, de `config/hosted.json`), nunca `file://`. O app carrega o catálogo com `fetch`, que não funciona em `file://`, e o player do YouTube exige uma origem HTTP(S). Na Android, a WebView só navega para o app hospedado e o YouTube, e `MtvTv.exitApp()` só vale com o app hospedado na página principal (ver [`android/README.md`](android/README.md#política-de-origem)).
 - **Teclas:** o app lê só `KeyboardEvent.key`. A casca repassa setas como `ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, OK como `Enter`, Voltar como `Escape`, CH+/CH- como `ChannelUp`/`ChannelDown`, Menu como `ContextMenu`, a tecla amarela como `ColorF2Yellow` e Info como `Info`.
-- **Empacotamento:** a casca carrega `assets/web/index.html`. O conteúdo de `web/dist/` deve chegar a `android/app/src/main/assets/web/` no build do APK (de preferência por uma task Gradle, sem commitar o build).
+- **Empacotamento:** nenhuma casca empacota o app web. O APK só tem a casca e a tela de aviso local (`android/app/src/main/assets/aviso.html`).
 - **WebView:** JavaScript e DOM storage ligados, e `mediaPlaybackRequiresUserGesture = false`, para o autoplay com som funcionar.
 
 ## Segredos e dados do ambiente
