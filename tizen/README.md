@@ -1,11 +1,12 @@
 # Casca Tizen (Samsung Q80)
 
-Empacota o app web como `.wgt` e instala na Samsung QN55Q80TAGXZD (Tizen 5.5) por `sdb`, em modo desenvolvedor, para uso pessoal. O app web é único (`web/`); esta pasta só tem o manifesto, o ícone e os scripts. Ver o PRD na issue #40.
+Empacota a casca como `.wgt` e instala na Samsung QN55Q80TAGXZD (Tizen 5.5) por `sdb`, em modo desenvolvedor, para uso pessoal. O app web é único (`web/`) e fica hospedado; esta pasta só tem o manifesto, o ícone, o lançador e os scripts. Ver o PRD na issue #40.
 
 | Arquivo | Para quê |
 | --- | --- |
 | `config.template.xml` | Modelo do manifesto (o `config.xml` é gerado no build, ver [Configuração por build](#configuração-por-build)): id `mtvtv00001.MtvTv`, tela cheia, privilégios `internet`, `network.get`, `power` e `tv.inputdevice` |
 | `icon.png` | Ícone |
+| `launcher/index.html` | Lançador local, o `content src` do `.wgt`: mostra a marca na hora, abre a URL hospedada e, se ela não carregar, mostra o aviso e tenta de novo (ver [Casca que abre a URL](#casca-que-abre-a-url)) |
 | `test-page/` | Página mínima que mostra `navigator.userAgent` (primeiro marco) |
 | `scripts/build-wgt.sh` | Gera o `.wgt` assinado em `tizen/build/`; falha se o pacote sair sem assinatura |
 | `scripts/install-tv.sh` | Instala o `.wgt` na TV e abre o app |
@@ -14,11 +15,11 @@ Empacota o app web como `.wgt` e instala na Samsung QN55Q80TAGXZD (Tizen 5.5) po
 
 ```bash
 tizen/scripts/build-wgt.sh --test   # página de teste (padrão)
-tizen/scripts/build-wgt.sh --app    # rebuilda web/ (pnpm build:tizen) e empacota web/dist-tizen
+tizen/scripts/build-wgt.sh --app    # lançador + URL de config/hosted.json (sem app nem catálogo no pacote)
 tizen/scripts/install-tv.sh         # informe o IP: install-tv.sh <ip-da-tv> ou TV_IP=<ip-da-tv>
 ```
 
-`--app` sempre roda `pnpm build:tizen` antes de empacotar, para nunca instalar um `dist-tizen/` velho. Esse build (`vite build --mode tizen`) converte JS e CSS para `chrome69`, o Chromium da Q80 (ver [Chromium da Q80](#chromium-da-q80)), e grava em `web/dist-tizen/`; o `pnpm build` normal (web e Android) continua igual em `web/dist/`.
+O `--app` não empacota mais o app: ele vem da URL hospedada, então atualizar o app não exige reinstalar o `.wgt`. O `pnpm build:tizen` (usado só para checar a compatibilidade com o Chromium 69) mantém esse build (`vite build --mode tizen`) converte JS e CSS para `chrome69`, o Chromium da Q80 (ver [Chromium da Q80](#chromium-da-q80)), e grava em `web/dist-tizen/`, que não entra no pacote; o `pnpm build` normal (web e Android) continua igual em `web/dist/`.
 
 Depois do build, `web/scripts/check-bundle.ts` confere o `dist-tizen/` e falha o build (e o `--app`) se sobrar sintaxe acima do Chromium 69: `?.`, `??`, BigInt ou qualquer coisa além do ES2020 no JS, e `inset`, `aspect-ratio`, `:is()`, `:where()`, `:has()` ou `@layer` no CSS. Para conferir outro build à mão: `cd web && node scripts/check-bundle.ts dist`. O que a conversão não resolve (gap em flex, `backdrop-filter`) está em [`web/docs/chromium69-apis.md`](../web/docs/chromium69-apis.md).
 
@@ -69,6 +70,17 @@ Mozilla/5.0 (SMART-TV; LINUX; Tizen 5.5) AppleWebKit/537.36 (KHTML, like Gecko) 
 
 Isso confirma o alvo `chrome69` previsto no PRD #40 para o build do app.
 
+## Casca que abre a URL
+
+O `.wgt` traz só `index.html` (o lançador), `config.js` (a URL, gerada de `config/hosted.json` por `hosted-config.ts launcher-config`), `config.xml` e o ícone. A Tizen não tem gancho de erro para um `content src` remoto (sem rede viraria tela branca), por isso o `content src` é o lançador local:
+
+1. Abre com a marca MTV TV sobre o fundo escuro do app, sem tela branca.
+2. Testa a URL hospedada (`fetch` `no-cors`, timeout de 8 s). Se responde, `location.replace(url)`: o app roda numa origem https, o que resolve o erro 153 do YouTube.
+3. Se falha (sem internet, site fora do ar, deploy quebrado), mostra "Sem conexão com a internet" ou "Não foi possível abrir o MTV TV" com o botão Sair, mantém a TV acesa e tenta de novo ao voltar a rede (evento `online`) e a cada 10 s.
+4. Voltar do controle (10009) fecha o app; Enter fecha quando o aviso está na tela. Com a página externa, Sair, teclas e "manter a TV acesa" continuam por conta do próprio app (`platform.ts`, `tizen-keys.ts`), que só precisa do `<access>` do domínio.
+
+Limite: `no-cors` não expõe o status HTTP, então um 404 do GitHub Pages conta como "carregou".
+
 ## Primeiro boot na Q80 (issue #50)
 
 Medido na TV real em 2026-11-08, com o app completo. Para ler o console sem `sdb shell`, usei um pacote temporário (não commitado) com um script que mandava `onerror`/`console.error` por `new Image().src = "http://<ip-do-mac>:8099/log?..."` a um servidor no Mac; o CSP do app precisa de `img-src` para esse host, e o `config.xml` de `<access>` (abaixo).
@@ -86,5 +98,5 @@ Com o app servido por http (testado a partir do Mac), o 153 some, o que confirma
 
 O endereço do app hospedado vive em `config/hosted.json` (versionado: o site é público, o endereço não é segredo). Ele tem `domain` (só o domínio, ex.: `meu-usuario.github.io`) e `path` (o caminho base, começa e termina com `/`, ex.: `/mtv-tv-app/`; `/` se o app estiver na raiz do domínio). O GitHub Pages serve um repositório em `https://<usuário>.github.io/<repo>/`, por isso o caminho. A URL é `https://<domain><path>`.
 
-- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com a URL e `<access>` só para o domínio hospedado e o YouTube (a Tizen restringe por origem, então o caminho não entra no `<access>`) (nada de `*`). Sem o arquivo, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
+- `build-wgt.sh` gera o `config.xml` a partir de `config.template.xml` por `web/scripts/hosted-config.ts`: `content src` com o lançador (`index.html`, que lê a URL do `config.js`) e `<access>` só para o domínio hospedado e o YouTube (a Tizen restringe por origem, então o caminho não entra no `<access>`) (nada de `*`). Sem o arquivo, o build `--app` falha com a mensagem do que fazer. O `--test` não precisa dele.
 - A Android lê a mesma URL no build como `BuildConfig.APP_URL`.
