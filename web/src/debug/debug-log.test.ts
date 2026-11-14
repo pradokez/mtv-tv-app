@@ -39,6 +39,14 @@ describe("debug overlay", () => {
     for (let i = 0; i < 30; i++) debugLog(`linha ${i}`);
     expect(panel.textContent).toContain("linha 29");
     expect(panel.textContent).not.toContain("linha 5\n");
-    expect(panel.textContent.split("\n")).toHaveLength(16);
+    expect(panel.textContent.split("\n")).toHaveLength(22);
+  });
+
+  it("junta mensagens iguais em sequência numa linha com contador", () => {
+    const { win, panel } = fakeWindow("?debug=1");
+    installDebugOverlay(win, {});
+    for (let i = 0; i < 3; i++) debugLog("repetida");
+    expect(panel.textContent.match(/repetida/g)).toHaveLength(1);
+    expect(panel.textContent).toContain("repetida (x3)");
   });
 });

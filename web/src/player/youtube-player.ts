@@ -1,4 +1,4 @@
-import { debugLog } from "../debug/debug-log";
+import { debugActive, debugLog } from "../debug/debug-log";
 import { systemClock, type Clock, type TimerId } from "../lib/clock";
 import { createEmitter, type PlayerAdapter } from "./player";
 
@@ -16,6 +16,8 @@ interface YTPlayer {
   mute(): void;
   unMute(): void;
   getPlayerState(): number;
+  getCurrentTime?(): number;
+  getVideoLoadedFraction?(): number;
   setPlaybackQuality?(quality: string): void;
   destroy(): void;
 }
@@ -101,6 +103,7 @@ export function createYouTubePlayer(
     const state = player.getPlayerState();
     if (state !== State.UNSTARTED && state !== State.CUED) return;
     muted = true;
+    debugLog(`autoplay recusado (estado ${state}): mudo e playVideo`);
     player.mute();
     player.playVideo();
     hint.show();
@@ -151,6 +154,7 @@ export function createYouTubePlayer(
             debugLog(`iframe ${frame ? `${Math.round(frame.width)}x${Math.round(frame.height)}` : "ausente"}`);
           }, 4000);
           player = instance;
+          if (debugActive()) pollForDebug();
           // A replacement player must stay muted until the user unmutes.
           if (muted) instance.mute();
           if (pending) start(pending.videoId, pending.startSec);
@@ -173,6 +177,21 @@ export function createYouTubePlayer(
     });
   }, retryWhenOnline);
   mountPlayer();
+
+  let polling = false;
+  const pollForDebug = () => {
+    if (polling) return;
+    polling = true;
+    const tick = () => {
+      if (player) {
+        const time = player.getCurrentTime?.().toFixed(1);
+        const loaded = player.getVideoLoadedFraction?.().toFixed(2);
+        debugLog(`estado ${player.getPlayerState()} t=${time} carregado=${loaded}`);
+      }
+      clock.setTimeout(tick, 3000);
+    };
+    tick();
+  };
 
   const replacePlayer = () => {
     failed = false;
