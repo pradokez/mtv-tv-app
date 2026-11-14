@@ -9,8 +9,8 @@ cd "$(dirname "$0")/.."
 . "$PWD/scripts/env.sh"
 
 TV="${1:-${TV_IP:-$TV_IP_DEFAULT}}"
-APP_ID="$(sed -n 's/.*<tizen:application id="\([^"]*\)".*/\1/p' config.xml)"
-[ -n "$APP_ID" ] || { echo "Não achei o id do app em tizen/config.xml." >&2; exit 1; }
+APP_ID="$(sed -n 's/.*<tizen:application id="\([^"]*\)".*/\1/p' config.template.xml)"
+[ -n "$APP_ID" ] || { echo "Não achei o id do app em tizen/config.template.xml." >&2; exit 1; }
 WGT="$PWD/build/$WGT_NAME"
 [ -f "$WGT" ] || { echo "Nenhum $WGT_NAME em tizen/build; rode scripts/build-wgt.sh antes." >&2; exit 1; }
 

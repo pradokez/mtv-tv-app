@@ -12,6 +12,7 @@ App Android TV de uso pessoal que toca canais de videoclipes no estilo da MTV an
 - [Guia de controles](#guia-de-controles)
 - [Desenvolvimento](#desenvolvimento)
 - [Catálogo de canais](#catálogo-de-canais)
+- [Publicar o site](#publicar-o-site)
 - [Contrato com a casca (Android ou Tizen)](#contrato-com-a-casca-android-ou-tizen)
 - [Privacidade](#privacidade)
 - [Documentação adicional](#documentação-adicional)
@@ -146,6 +147,7 @@ pnpm test        # Vitest
 pnpm typecheck   # tsc estrito
 pnpm build       # typecheck + build em web/dist/
 pnpm catalog     # gera o catálogo real (exige YOUTUBE_API_KEY)
+pnpm publish:site  # builda e publica no Cloudflare Pages (ver "Publicar o site")
 ```
 
 - **Tela cheia no Mac:** ⌃⌘F no navegador. O app ocupa a janela inteira e não usa a Fullscreen API, que exige um gesto do usuário.
@@ -155,7 +157,7 @@ pnpm catalog     # gera o catálogo real (exige YOUTUBE_API_KEY)
 
 ## Catálogo de canais
 
-`pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site de origem e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git e nunca deve ser commitado nem publicado (a curadoria é do criador do site). O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
+`pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site de origem e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git e nunca deve ser commitado nem passar por CI ou secret (a curadoria é do criador do site); ele só sai da sua máquina pelo `pnpm publish:site`, que o publica abertamente junto com o site (ver [Publicar o site](#publicar-o-site)). A permissão de redistribuição pelo criador do site de origem não foi verificada. O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
 
 **Comerciais:** a lista de comerciais dos intervalos é curada à mão em [`web/curadoria/comerciais-br.json`](web/curadoria/comerciais-br.json) (versionada, ao contrário do snapshot). O `pnpm catalog` lê esse arquivo, valida duração e embed de cada comercial junto com os clipes e grava o que sobrar no campo `commercials` do snapshot; eles não viram canal. Para trocar a lista, edite o JSON (`id`, `brand`, `title`, `year`) e rode `pnpm catalog` de novo. O relatório mostra quantos comerciais ficaram e quantos foram descartados.
 
@@ -164,6 +166,31 @@ pnpm catalog     # gera o catálogo real (exige YOUTUBE_API_KEY)
 - Vídeos privados, removidos, não embutíveis ou sem duração (ex.: lives) ficam fora do snapshot, e canais que ficam vazios são omitidos. O relatório conta os descartes por motivo e mostra a cota usada.
 - Cada consulta pede 50 vídeos e custa 1 unidade: a primeira execução gasta ~2.150 unidades (a cota diária padrão é 10.000).
 - As respostas ficam em `web/.cache/youtube-meta.json` (ignorado pelo git) e o cache é gravado após cada lote: se a execução parar no meio (cota, rede), rodar de novo continua de onde parou, e execuções seguintes só consultam vídeos novos. Para consultar tudo de novo, apague o arquivo.
+
+## Publicar o site
+
+O app é hospedado no Cloudflare Pages, na raiz do domínio (`https://<projeto>.pages.dev/`), para o player do YouTube ter uma origem https. O site é público: sem caminho secreto nem `noindex`. Tudo roda da sua máquina, em `web/`; nada disso passa por git ou CI.
+
+**Uma vez:** crie o projeto no Pages com `pnpm exec wrangler pages project create <projeto> --production-branch main` (pede `pnpm exec wrangler login`, ou use um API token) e crie `web/.publish.local` (ignorado pelo git), uma chave por linha:
+
+```bash
+# CLOUDFLARE_API_TOKEN: permissão Cloudflare Pages: Edit
+PAGES_PROJECT=<projeto>
+CLOUDFLARE_API_TOKEN=<api token>
+CLOUDFLARE_ACCOUNT_ID=<id da conta>
+```
+
+As mesmas chaves podem vir de variáveis de ambiente, que têm prioridade sobre o arquivo. O API token nunca vai para arquivo versionado (um teste falha se o configurado aparecer em algum).
+
+```bash
+pnpm catalog            # o catálogo real precisa estar em public/catalog.json
+pnpm publish:site       # builda (build:tizen), confere e publica dist-tizen/; imprime a URL
+pnpm publish:list       # lista os deploys de produção, com os ids
+pnpm publish:rollback <id>  # volta para um deploy anterior (pela API do Cloudflare)
+```
+
+- **Guardas:** o `publish:site` falha, sem enviar nada, se `public/catalog.json` faltar, for o catálogo de exemplo ou for pequeno demais (menos de 10 canais ou 1.000 vídeos), ou se o `dist-tizen/` gerado não tiver o `index.html` e o catálogo real.
+- **Rollback:** cada deploy fica guardado no Cloudflare; `publish:rollback` promove um anterior a produção. Um deploy quebrado derruba as duas TVs até o rollback.
 
 ## Contrato com a casca (Android ou Tizen)
 

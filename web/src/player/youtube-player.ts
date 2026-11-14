@@ -128,6 +128,11 @@ export function createYouTubePlayer(
         rel: 0,
         iv_load_policy: 3,
         playsinline: 1,
+        // Captions are always on and in English, not the TV/locale
+        // default (pt-BR).
+        hl: "en",
+        cc_lang_pref: "en",
+        cc_load_policy: 1,
         origin: window.location.origin,
       },
       events: {
