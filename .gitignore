@@ -5,3 +5,4 @@ web/dist-tizen/
 web/public/catalog.json
 web/.cache/
 tizen/build/
+config/hosted.local.json

@@ -3,6 +3,19 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// A URL do app hospedado vem de config/hosted.local.json (fora do git), pelo mesmo
+// módulo que gera o config.xml da Tizen. Falha o build com a mensagem dele se faltar.
+// isIgnoreExitValue: sem ele o Gradle só diz "exit value 1" e engole o stderr do script.
+val hostedConfig = providers.exec {
+    commandLine("node", "${rootDir.parentFile}/web/scripts/hosted-config.ts", "android-url")
+    isIgnoreExitValue = true
+}
+val appUrl: String = if (hostedConfig.result.get().exitValue == 0) {
+    hostedConfig.standardOutput.asText.get().trim()
+} else {
+    throw GradleException(hostedConfig.standardError.asText.get().trim())
+}
+
 android {
     namespace = "app.mtvtv"
     compileSdk = 34
@@ -13,8 +26,12 @@ android {
         targetSdk = 30
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "APP_URL", "\"$appUrl\"")
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
