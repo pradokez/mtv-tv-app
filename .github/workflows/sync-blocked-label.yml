@@ -1,0 +1,26 @@
+# Aplica a label `blocked` nas issues abertas que ainda têm bloqueadoras abertas
+# (lidas da seção "## Blocked by" do corpo) e a remove quando todas fecham.
+name: Sync blocked label
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+concurrency:
+  group: sync-blocked-label
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: .github/scripts/sync-blocked-label.sh
