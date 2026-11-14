@@ -44,4 +44,4 @@ No emulador, desligue a verificação do Play Protect para a instalação não t
 
 ## URL do app hospedado
 
-O build exige `config/hosted.local.json` (ignorado pelo git; modelo em `config/hosted.example.json`). O Gradle chama `web/scripts/hosted-config.ts android-url` e expõe o resultado como `BuildConfig.APP_URL`, a mesma URL usada para gerar o `config.xml` da Tizen. Sem o arquivo, o build falha dizendo o que copiar. Ver [`tizen/README.md`](../tizen/README.md#configuração-por-build).
+O build lê o domínio de `config/hosted.json` (versionado). O Gradle chama `web/scripts/hosted-config.ts android-url` e expõe o resultado como `BuildConfig.APP_URL`, a mesma URL usada para gerar o `config.xml` da Tizen. Sem o arquivo, o build falha dizendo o que criar. Ver [`tizen/README.md`](../tizen/README.md#configuração-por-build).
