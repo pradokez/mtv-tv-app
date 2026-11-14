@@ -120,6 +120,19 @@ tizen/scripts/install-tv.sh <ip-da-tv>
 
 Depois, volte ao pacote normal (`build-wgt.sh --app` sem a variável) e reinstale. Se a instalação travar no `vd_appinstall` por minutos, encerre e rode de novo.
 
+## Sobreposições e a área segura (issue #48)
+
+Conferência da tarja, do guia (com os ajustes), do aviso de modo e da confirmação de saída em 1920×1080, a resolução da Q80, no navegador (a Q80 estava em uso). Todas ficam dentro da margem de 5% do `#overlays` (`web/src/style.css`), que é a área segura de TV:
+
+| Sobreposição | Margem medida (px) |
+| --- | --- |
+| Tarja inferior (`.lower-third`) | 96 à esquerda, 96 embaixo |
+| Aviso de modo (`.notice`) | 54 em cima, 96 à direita |
+| Guia e ajustes | 96 à esquerda, 96 à direita, ~54 em cima, ~54 embaixo |
+| Confirmação de saída | `padding: 0 5%` na faixa |
+
+Nada precisou de ajuste no CSS. **Pendente:** conferir na Q80 física (overscan real do painel), quando a TV estiver livre. Para isso: abrir o app e fotografar a tarja, o guia, os ajustes e um aviso, com os quatro cantos da tela visíveis.
+
 ## Configuração por build
 
 O endereço do app hospedado vive em `config/hosted.json` (versionado: o site é público, o endereço não é segredo). Ele tem `domain` (só o domínio, ex.: `meu-usuario.github.io`) e `path` (o caminho base, começa e termina com `/`, ex.: `/mtv-tv-app/`; `/` se o app estiver na raiz do domínio). O GitHub Pages serve um repositório em `https://<usuário>.github.io/<repo>/`, por isso o caminho. A URL é `https://<domain><path>`.
