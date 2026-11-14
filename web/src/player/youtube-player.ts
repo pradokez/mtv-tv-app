@@ -1,3 +1,4 @@
+import { debugLog, watchPlayerForDebug } from "../debug/debug-log";
 import { systemClock, type Clock, type TimerId } from "../lib/clock";
 import { createEmitter, type PlayerAdapter } from "./player";
 
@@ -77,12 +78,19 @@ export function createYouTubePlayer(
   let autoplayCheck: TimerId | undefined;
   let muted = false;
   let autoplayKnownOk = autoplayAllowed;
+  let stopWatching = () => {};
 
   const start = (videoId: string, startSec: number) => {
     if (!player) return;
+    debugLog(`carregando ${videoId}`);
     player.loadVideoById({ videoId, startSeconds: startSec });
     player.setPlaybackQuality?.("hd720");
+    scheduleAutoplayCheck();
+  };
+
+  const scheduleAutoplayCheck = () => {
     if (autoplayCheck !== undefined) clock.clearTimeout(autoplayCheck);
+    autoplayCheck = undefined;
     if (!muted && !autoplayKnownOk) autoplayCheck = clock.setTimeout(checkAutoplay, AUTOPLAY_CHECK_MS);
   };
 
@@ -94,13 +102,16 @@ export function createYouTubePlayer(
     const state = player.getPlayerState();
     if (state !== State.UNSTARTED && state !== State.CUED) return;
     muted = true;
+    debugLog(`autoplay recusado (estado ${state}): mudo e playVideo`);
     player.mute();
     player.playVideo();
     hint.show();
     const unmute = () => {
       muted = false;
       autoplayKnownOk = true;
+      debugLog("tecla: unMute e playVideo");
       player?.unMute();
+      player?.playVideo();
       hint.hide();
     };
     window.addEventListener("keydown", unmute, { once: true, capture: true });
@@ -115,6 +126,7 @@ export function createYouTubePlayer(
   };
 
   const mountPlayer = () => void loadIframeApi().then((YT) => {
+    debugLog("api do YouTube carregada");
     const mount = document.createElement("div");
     container.prepend(mount);
     const instance = new YT.Player(mount, {
@@ -137,17 +149,24 @@ export function createYouTubePlayer(
       },
       events: {
         onReady: () => {
+          debugLog("player pronto");
           player = instance;
+          stopWatching = watchPlayerForDebug(instance, container, clock);
           // A replacement player must stay muted until the user unmutes.
           if (muted) instance.mute();
           if (pending) start(pending.videoId, pending.startSec);
           pending = undefined;
         },
         onStateChange: ({ data }) => {
+          debugLog(`estado ${data}`);
           if (data === State.PLAYING && !muted) autoplayKnownOk = true;
+          // The Samsung TV buffers the clip and then drops back to unstarted
+          // when it refuses autoplay with sound: check again.
+          if (data === State.UNSTARTED) scheduleAutoplayCheck();
           if (data === State.ENDED && currentVideoId) ended.emit(currentVideoId);
         },
         onError: ({ data }) => {
+          debugLog(`erro do player ${data}`);
           failed = true;
           if (currentVideoId) errored.emit(currentVideoId, data);
         },
@@ -160,6 +179,7 @@ export function createYouTubePlayer(
     failed = false;
     if (autoplayCheck !== undefined) clock.clearTimeout(autoplayCheck);
     autoplayCheck = undefined;
+    stopWatching();
     player?.destroy();
     player = undefined;
     mountPlayer();

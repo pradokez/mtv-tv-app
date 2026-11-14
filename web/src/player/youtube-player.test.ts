@@ -17,7 +17,10 @@ class FakeYTPlayer {
     FakeYTPlayer.last = this;
   }
   loadVideoById() {}
-  playVideo() {}
+  plays = 0;
+  playVideo() {
+    this.plays++;
+  }
   mute() {
     this.muted = true;
   }
@@ -96,6 +99,15 @@ describe("YouTube player: autoplay fallback", () => {
     expect(yt.muted).toBe(false);
   });
 
+  it("calls playVideo when the key turns the sound on", async () => {
+    const { player, yt, advance, listeners } = await setup();
+    player.load("a", 0);
+    advance(1500);
+    const playsBefore = yt.plays;
+    listeners.get("keydown")!();
+    expect(yt.plays).toBe(playsBefore + 1);
+  });
+
   it("does not mute the next clips after a key turned the sound on", async () => {
     const { player, yt, advance, listeners } = await setup();
     player.load("a", 0);
@@ -106,6 +118,19 @@ describe("YouTube player: autoplay fallback", () => {
     player.load("b", 90);
     advance(1500);
     expect(yt.muted).toBe(false);
+  });
+
+  it("mutes when a clip that was buffering falls back to unstarted (seen on the Samsung TV)", async () => {
+    const { player, yt, advance } = await setup();
+    player.load("a", 0);
+    yt.state = 3;
+    yt.options.events.onStateChange({ data: 3 });
+    advance(1500);
+    expect(yt.muted).toBe(false);
+    yt.state = UNSTARTED;
+    yt.options.events.onStateChange({ data: UNSTARTED });
+    advance(1500);
+    expect(yt.muted).toBe(true);
   });
 
   it("never mutes where autoplay is known to be allowed, as in the Android shell", async () => {
