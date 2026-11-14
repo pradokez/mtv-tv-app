@@ -205,7 +205,6 @@ O repositório é público. **Chave de API, IP, serial, token e qualquer dado do
 | --- | --- |
 | `YOUTUBE_API_KEY` | Variável de ambiente |
 | `TV_IP` (ou o argumento dos `install-tv.sh`; sem IP padrão) | Variável de ambiente ou argumento |
-| `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PAGES_PROJECT` | Ambiente ou `web/.publish.local` (ignorado) |
 | SDK do Android | `android/local.properties` (ignorado) |
 
 [`.env.example`](.env.example) lista as variáveis, sem valores. Nos docs e exemplos, o IP da TV é sempre `<ip-da-tv>`. O `.gitignore` cobre `.env*` (menos o exemplo), chaves e certificados, e `web/scripts/repo-hygiene.test.ts` (parte do `pnpm test`) falha se um arquivo versionado tiver IP privado (`192.168.*`, `10.*`, `172.16-31.*`), chave de API conhecida (`AIza…`, `ghp_…`, `cfut_…`) ou chave privada.
