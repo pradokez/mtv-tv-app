@@ -3,6 +3,12 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// A URL do app hospedado vem de config/hosted.local.json (fora do git), pelo mesmo
+// módulo que gera o config.xml da Tizen. Falha o build com a mensagem dele se faltar.
+val appUrl: String = providers.exec {
+    commandLine("node", "${rootDir.parentFile}/web/scripts/hosted-config.ts", "android-url")
+}.standardOutput.asText.get().trim()
+
 android {
     namespace = "app.mtvtv"
     compileSdk = 34
@@ -13,8 +19,12 @@ android {
         targetSdk = 30
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "APP_URL", "\"$appUrl\"")
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
     buildTypes {
         release {
             isMinifyEnabled = false

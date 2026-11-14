@@ -41,3 +41,7 @@ retornar algo diferente de `true` faz a Activity sair.
 `scripts/install-tv.sh --device emulator-5554` instala em um emulador Android TV já aberto.
 No emulador, desligue a verificação do Play Protect para a instalação não travar:
 `adb shell settings put global package_verifier_enable 0`.
+
+## URL do app hospedado
+
+O build exige `config/hosted.local.json` (ignorado pelo git; modelo em `config/hosted.example.json`). O Gradle chama `web/scripts/hosted-config.ts android-url` e expõe o resultado como `BuildConfig.APP_URL`, a mesma URL usada para gerar o `config.xml` da Tizen. Sem o arquivo, o build falha dizendo o que copiar. Ver [`tizen/README.md`](../tizen/README.md#configuração-por-build).
