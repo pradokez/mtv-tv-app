@@ -124,7 +124,8 @@ export function gitDeployer({
           );
         }
         await git(cwd, "tag", tag);
-        await git(cwd, "push", "--force", remote, `HEAD:refs/heads/${BRANCH}`, `refs/tags/${tag}`);
+        // Atomic: the live branch never moves without its tag, so it can always be rolled back to.
+        await git(cwd, "push", "--atomic", "--force", remote, `HEAD:refs/heads/${BRANCH}`, `refs/tags/${tag}`);
         await prune(cwd, tag);
         return { tag };
       }),
