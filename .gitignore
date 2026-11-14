@@ -6,3 +6,14 @@ web/public/catalog.json
 web/.cache/
 web/.publish.local
 tizen/build/
+
+# Segredos e dados do ambiente: só em variável de ambiente ou arquivo local.
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+*.jks
+*.keystore
+local.properties
