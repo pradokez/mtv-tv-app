@@ -1,0 +1,22 @@
+{
+  "_comentario": "Regras que ligam as músicas curtidas aos canais que o site já tem. `genres`: gêneros do artista no Spotify, casados por palavra inteira (ex.: \"rap\" não casa com \"trap\"). `exclude` tira o canal quando algum desses termos também aparece. A década vem do ano de lançamento (canais 70s a 2020s).",
+  "genres": [
+    { "channel": "hairmetal", "genres": ["hair metal", "glam metal"] },
+    { "channel": "metal", "genres": ["metal"] },
+    { "channel": "grunge", "genres": ["grunge"] },
+    { "channel": "britpop", "genres": ["britpop"] },
+    { "channel": "newwave", "genres": ["new wave", "new romantic"] },
+    { "channel": "kpop", "genres": ["k-pop"] },
+    { "channel": "citypop", "genres": ["city pop"] },
+    { "channel": "disco", "genres": ["disco"] },
+    { "channel": "funk", "genres": ["funk"], "exclude": ["carioca", "paulista", "baile", "ostentacao", "brazilian", "metal", "rock"] },
+    { "channel": "raps", "genres": ["hip hop", "rap"] },
+    { "channel": "jazz", "genres": ["jazz"] },
+    { "channel": "blues", "genres": ["blues"] },
+    { "channel": "country", "genres": ["country"] },
+    { "channel": "yachtrock", "genres": ["yacht rock"] },
+    { "channel": "afrobeat", "genres": ["afrobeat", "afrobeats"] },
+    { "channel": "rootsreggae", "genres": ["roots reggae"] },
+    { "channel": "brazil", "genres": ["brazilian", "mpb", "samba", "bossa nova", "pagode", "sertanejo", "forro", "tropicalia", "axe"] }
+  ]
+}

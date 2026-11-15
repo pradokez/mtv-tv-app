@@ -36,6 +36,14 @@ export function formatReport(report: BuildReport): string {
     `Comerciais:`,
     `  mantidos: ${count(report.commercials.kept)}`,
     ...DISCARD_REASONS.map((reason) => `  ${COMMERCIAL_LABELS[reason]}: ${count(report.commercials.discarded[reason])}`),
+    ...(report.likedClips.clips + report.likedClips.noChannel > 0
+      ? [
+          `Clipes das curtidas:`,
+          `  adicionados: ${count(report.likedClips.clips)} (${count(report.likedClips.placements)} entradas em canais)`,
+          `  só no ${"SHUFFLE ALL"} (nenhum canal combina): ${count(report.likedClips.onlyAll)}`,
+          `  fora do catálogo (nenhum canal combina e não há canal all): ${count(report.likedClips.noChannel)}`,
+        ]
+      : []),
     `Cota da API usada: ${count(report.quotaUnits)} ${report.quotaUnits === 1 ? "unidade" : "unidades"}`,
   ];
   if (report.warnings.length) lines.push("Avisos:", ...report.warnings.map((w) => `  ${w}`));

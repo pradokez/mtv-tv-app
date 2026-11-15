@@ -9,6 +9,19 @@ import type { ChannelConfig, ChannelInfo } from "./channel-config.ts";
 import type { CuratedCommercial } from "./commercials.ts";
 import type { OwnChannel } from "./own-channels.ts";
 
+/** A clip of a liked song, already matched to the ids of the site's channels it fits. */
+export interface LikedClip {
+  /** YouTube video id. */
+  id: string;
+  artist: string;
+  song: string;
+  /** Ids of existing channels (decade, genre). Channels the snapshot does not have are ignored. */
+  channels: readonly string[];
+}
+
+/** Where a clip that fits no existing channel goes, so it still shows up in the app. */
+export const FALLBACK_CHANNEL = "all";
+
 /** One entry of the site's search index. `y` is the upload year and is never used. */
 export interface SearchEntry {
   id: string;
@@ -52,6 +65,8 @@ export interface BuildInput {
   commercials?: readonly CuratedCommercial[];
   /** The hand-curated channels, added to the site's. Their artist and song win over the search index. */
   ownChannels?: readonly OwnChannel[];
+  /** Clips of the liked songs, added to the site's existing channels (no channel is created). */
+  likedClips?: readonly LikedClip[];
 }
 
 export interface DroppedChannel {
@@ -77,6 +92,8 @@ export interface BuildReport {
   quotaUnits: number;
   /** The curated commercials: kept in the snapshot, or left out because the TV could not play them. */
   commercials: { kept: number; discarded: Record<DiscardReason, number> };
+  /** The liked songs' clips: distinct clips added, how many channel entries they made, and how many fit no channel but `all`. */
+  likedClips: { clips: number; placements: number; onlyAll: number; noChannel: number };
   warnings: string[];
 }
 
@@ -113,6 +130,7 @@ export async function build(input: BuildInput): Promise<BuildResult> {
       kept: 0,
       discarded: Object.fromEntries(DISCARD_REASONS.map((r) => [r, 0])) as Record<DiscardReason, number>,
     },
+    likedClips: { clips: 0, placements: 0, onlyAll: 0, noChannel: 0 },
     warnings: [],
   };
 
@@ -139,6 +157,7 @@ export async function build(input: BuildInput): Promise<BuildResult> {
   }
 
   addOwnChannels(candidates, ownMeta, input.ownChannels ?? [], input.channelConfig, report);
+  addLikedClips(candidates, ownMeta, input.likedClips ?? [], new Set(input.searchIndex.filter((e) => e.a && e.s).map((e) => e.id)), report);
 
   const clipIds = new Set(candidates.flatMap((c) => c.videoIds));
   const curated = input.commercials ?? [];
@@ -218,6 +237,45 @@ function addOwnChannels(
     const entry = { id: channel.id, info: { name: channel.name, icon: channel.icon }, videoIds: channel.videos.map((v) => v.id) };
     candidates.splice(lastOfSection === -1 ? candidates.length : lastOfSection + 1, 0, entry);
     for (const { id, artist, song } of channel.videos) ownMeta.set(id, { artist, song });
+  }
+}
+
+/**
+ * Adds each liked clip to the existing channels it fits. No channel is
+ * created: a clip that fits none goes only to `all` (SHUFFLE ALL), or is
+ * counted as left out when the site has no such channel. A clip the site
+ * already catalogs with artist and song keeps the site's tarja.
+ */
+function addLikedClips(
+  candidates: { id: string; info: ChannelInfo; videoIds: string[] }[],
+  ownMeta: Map<string, VideoSnapshot>,
+  clips: readonly LikedClip[],
+  describedBySite: ReadonlySet<string>,
+  report: BuildReport,
+): void {
+  const byId = new Map(candidates.map((c) => [c.id, c]));
+  for (const clip of clips) {
+    if (!YOUTUBE_ID.test(clip.id)) {
+      report.warnings.push(`clipe curtido ${clip.id}: ID do YouTube inválido, ignorado`);
+      continue;
+    }
+    let targets = [...new Set(clip.channels)].flatMap((id) => (id === FALLBACK_CHANNEL ? [] : byId.get(id) ?? []));
+    const fallback = byId.get(FALLBACK_CHANNEL);
+    const onlyAll = targets.length === 0;
+    if (onlyAll) targets = fallback ? [fallback] : [];
+    if (targets.length === 0) {
+      report.likedClips.noChannel++;
+      continue;
+    }
+    for (const target of targets) {
+      if (!target.videoIds.includes(clip.id)) {
+        target.videoIds.push(clip.id);
+        report.likedClips.placements++;
+      }
+    }
+    if (onlyAll) report.likedClips.onlyAll++;
+    report.likedClips.clips++;
+    if (!describedBySite.has(clip.id) && !ownMeta.has(clip.id)) ownMeta.set(clip.id, { artist: clip.artist, song: clip.song });
   }
 }
 
