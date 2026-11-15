@@ -12,6 +12,7 @@ const report: BuildReport = {
   metadata: { artistAndSong: 1000, titleOnly: 150, none: 50 },
   quotaUnits: 2150,
   commercials: { kept: 48, discarded: { "privado ou removido": 2, "não embutível": 1, "sem duração": 0 } },
+  likedClips: { clips: 0, placements: 0, onlyAll: 0, noChannel: 0 },
   warnings: [],
 };
 
@@ -46,6 +47,18 @@ describe("formatReport", () => {
         "  privados ou removidos: 2",
         "  não embutíveis: 1",
         "  sem duração: 0",
+      ].join("\n"),
+    );
+  });
+
+  it("reports the liked clips only when there are some", () => {
+    expect(formatReport(report)).not.toContain("Clipes das curtidas");
+    expect(formatReport({ ...report, likedClips: { clips: 40, placements: 95, onlyAll: 6, noChannel: 2 } })).toContain(
+      [
+        "Clipes das curtidas:",
+        "  adicionados: 40 (95 entradas em canais)",
+        "  só no SHUFFLE ALL (nenhum canal combina): 6",
+        "  fora do catálogo (nenhum canal combina e não há canal all): 2",
       ].join("\n"),
     );
   });

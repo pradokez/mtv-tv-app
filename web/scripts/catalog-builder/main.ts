@@ -18,7 +18,7 @@
  * `.cache/youtube-meta.json` (git-ignored), so a run cut short by the quota
  * resumes where it stopped.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build, type SearchEntry } from "./build.ts";
@@ -26,6 +26,8 @@ import { parseChannelConfig } from "./channel-config.ts";
 import { parseCuratedCommercials } from "./commercials.ts";
 import { parseOwnChannels } from "./own-channels.ts";
 import { formatReport } from "./report.ts";
+import { parseGenreRules } from "../spotify/classify.ts";
+import { parseLikedClips, toLikedClips } from "../spotify/liked-clips.ts";
 import { createYouTubeMetaLookup } from "./youtube-meta.ts";
 
 const SITE = "https://wantmymtv.org";
@@ -37,6 +39,8 @@ const SOURCES = {
 const OUTPUT = fileURLToPath(new URL("../../public/catalog.json", import.meta.url));
 const CURATED_COMMERCIALS = fileURLToPath(new URL("../../curadoria/comerciais-br.json", import.meta.url));
 const OWN_CHANNELS = fileURLToPath(new URL("../../curadoria/canais-proprios.json", import.meta.url));
+const LIKED_CLIPS = fileURLToPath(new URL("../../curadoria/spotify-clipes.local.json", import.meta.url));
+const GENRE_RULES = fileURLToPath(new URL("../../curadoria/generos-canais.json", import.meta.url));
 const META_CACHE = fileURLToPath(new URL("../../.cache/youtube-meta.json", import.meta.url));
 
 async function download(url: string): Promise<string> {
@@ -74,6 +78,11 @@ async function main() {
 
   const ownChannels = parseOwnChannels(readFileSync(OWN_CHANNELS, "utf8"));
 
+  // Optional and local: the clips of the user's liked Spotify songs (`pnpm spotify:clips`).
+  const likedClips = existsSync(LIKED_CLIPS)
+    ? toLikedClips(parseLikedClips(readFileSync(LIKED_CLIPS, "utf8")), parseGenreRules(readFileSync(GENRE_RULES, "utf8")))
+    : [];
+
   console.log("Baixando playlists, configuração de canais e índice de busca…");
   const [playlists, channelConfig, searchIndex] = await Promise.all([
     download(SOURCES.playlists).then(parsePlaylists),
@@ -96,6 +105,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     commercials,
     ownChannels,
+    likedClips,
   });
 
   const json = JSON.stringify(catalog);

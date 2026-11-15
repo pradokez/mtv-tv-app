@@ -4,6 +4,8 @@ web/dist-tizen/
 .DS_Store
 web/public/catalog.json
 web/.cache/
+# Lista as músicas curtidas do Spotify: só local.
+web/curadoria/*.local.json
 tizen/build/
 
 # Segredos e dados do ambiente: só em variável de ambiente ou arquivo local.

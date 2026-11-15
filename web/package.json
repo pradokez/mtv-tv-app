@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "catalog": "node scripts/catalog-builder/main.ts",
+    "spotify:likes": "node scripts/spotify/main.ts likes",
+    "spotify:clips": "node scripts/spotify/main.ts clips",
     "publish:site": "node scripts/publish/main.ts publish",
     "publish:list": "node scripts/publish/main.ts list",
     "publish:rollback": "node scripts/publish/main.ts rollback"

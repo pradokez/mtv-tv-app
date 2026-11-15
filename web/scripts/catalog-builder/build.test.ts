@@ -408,4 +408,64 @@ describe("build", () => {
       expect(report.warnings).toEqual([expect.stringContaining("80s")]);
     });
   });
+  describe("liked clips", () => {
+    const L1 = "xKCek6_dB0M";
+    const L2 = "Jb2stN7kH28";
+    const withAll = (overrides: Partial<BuildInput> = {}) =>
+      input({
+        playlists: { "80s": [A, B], "90s": [C], all: [D] },
+        channelConfig: {
+          info: { "80s": { name: "80s", icon: "📼" }, "90s": { name: "90s", icon: "💿" }, all: { name: "SHUFFLE ALL", icon: "🔀" } },
+          sections: [{ id: "decades", channels: ["80s", "90s"] }, { id: "other", channels: ["all"] }],
+        },
+        ...overrides,
+      });
+
+    it("adds a clip to every existing channel it fits, creating no channel", async () => {
+      const { catalog, report } = await build(withAll({ likedClips: [{ id: L1, artist: "Nirvana", song: "Lithium", channels: ["90s", "grunge"] }] }));
+
+      expect(catalog.channels.map((c) => c.id)).toEqual(["80s", "90s", "all"]);
+      expect(catalog.channels.find((c) => c.id === "90s")?.videoIds).toEqual([C, L1]);
+      expect(catalog.channels.find((c) => c.id === "all")?.videoIds).toEqual([D]);
+      expect(catalog.videos[L1]).toEqual({ artist: "Nirvana", song: "Lithium" });
+      expect(report.likedClips).toEqual({ clips: 1, placements: 1, onlyAll: 0, noChannel: 0 });
+    });
+
+    it("sends a clip that fits no existing channel only to all", async () => {
+      const { catalog, report } = await build(withAll({ likedClips: [{ id: L2, artist: "Édith Piaf", song: "La Vie en Rose", channels: ["jazz"] }] }));
+
+      expect(catalog.channels.find((c) => c.id === "all")?.videoIds).toEqual([D, L2]);
+      expect(report.likedClips).toEqual({ clips: 1, placements: 1, onlyAll: 1, noChannel: 0 });
+    });
+
+    it("leaves a clip out when it fits nothing and the site has no all channel", async () => {
+      const { catalog, report } = await build(input({ likedClips: [{ id: L2, artist: "x", song: "y", channels: ["jazz"] }] }));
+
+      expect(catalog.videos[L2]).toBeUndefined();
+      expect(report.likedClips).toEqual({ clips: 0, placements: 0, onlyAll: 0, noChannel: 1 });
+    });
+
+    it("does not repeat a clip the channel already has and keeps the site's tarja", async () => {
+      const { catalog, report } = await build(input({ likedClips: [{ id: A, artist: "Someone Else", song: "Other", channels: ["80s"] }] }));
+
+      expect(catalog.channels.find((c) => c.id === "80s")?.videoIds).toEqual([A, B]);
+      expect(catalog.videos[A]).toEqual({ artist: "a-ha", song: "Take On Me" });
+      expect(report.likedClips.placements).toBe(0);
+    });
+
+    it("drops an unplayable liked clip like any other video", async () => {
+      const { catalog } = await build(
+        withAll({ likedClips: [{ id: L1, artist: "n", song: "l", channels: ["90s"] }], metaLookup: lookupOf({ [L1]: { discard: "não embutível" } }) }),
+      );
+
+      expect(catalog.channels.find((c) => c.id === "90s")?.videoIds).toEqual([C]);
+      expect(catalog.videos[L1]).toBeUndefined();
+    });
+
+    it("warns about and ignores an invalid id", async () => {
+      const { report } = await build(withAll({ likedClips: [{ id: "curto", artist: "n", song: "l", channels: ["90s"] }] }));
+
+      expect(report.warnings).toEqual([expect.stringContaining("curto")]);
+    });
+  });
 });

@@ -162,6 +162,17 @@ pnpm publish:rollback <tag>  # volta para uma publicação anterior
 
 `pnpm catalog` baixa as playlists, a configuração de canais e o índice de busca do site de origem e grava o snapshot real (~111 canais, ~107 mil vídeos, ~10 MB) em `web/public/catalog.json`, com um relatório de canais, vídeos, descartes e metadados. O arquivo é ignorado pelo git: nunca é commitado e não passa por CI nem por secret. Ele só sai da sua máquina pelo `pnpm publish:site`, que o publica abertamente na branch `gh-pages`, junto com o site. A permissão do criador do site de origem para redistribuir a curadoria não foi verificada: ver o aviso "Risco assumido" em [Publicar o site](#publicar-o-site). O formato está em [`web/docs/catalog-schema.md`](web/docs/catalog-schema.md).
 
+**Músicas curtidas do Spotify:** os clipes das suas curtidas entram nos canais que o site já tem (década pelo ano de lançamento; gênero pelas tags do artista no MusicBrainz, porque o Spotify não entrega gêneros a apps novos), sem criar canal. Clipe que não combina com nenhum canal vai só para `all` (SHUFFLE ALL). Só entram clipes de verdade: uploads de áudio, letra, visualizer e canais "- Topic" são descartados.
+
+```bash
+cd web
+SPOTIFY_CLIENT_ID=seu-client-id pnpm spotify:likes   # login no navegador (PKCE), lê as curtidas e busca os gêneros (~7 min)
+YOUTUBE_API_KEY=sua-chave pnpm spotify:clips         # procura o clipe de cada música
+YOUTUBE_API_KEY=sua-chave pnpm catalog               # mescla nos canais e gera o catálogo
+```
+
+No app do Spotify Developer Dashboard, marque só **Web API** e use o redirect URI `http://127.0.0.1:8888/callback`. Cada busca no YouTube custa 100 unidades da cota diária de 10 mil, então `spotify:clips` faz até 95 buscas por execução (`SPOTIFY_MAX_SEARCHES` muda o limite) e guarda tudo em `web/.cache/youtube-search.json`: rode de novo nos dias seguintes até "Ainda por buscar: 0". As regras de categoria estão em [`web/curadoria/generos-canais.json`](web/curadoria/generos-canais.json) (versionadas; ajuste e rode `pnpm catalog`, sem buscar de novo). O resultado em `web/curadoria/spotify-clipes.local.json` e o login em `web/.cache/` são ignorados pelo git, porque listam suas músicas. Depois, publique como de costume (`pnpm publish:site`).
+
 **Comerciais:** a lista de comerciais dos intervalos é curada à mão em [`web/curadoria/comerciais-br.json`](web/curadoria/comerciais-br.json) (versionada, ao contrário do snapshot). O `pnpm catalog` lê esse arquivo, valida duração e embed de cada comercial junto com os clipes e grava o que sobrar no campo `commercials` do snapshot; eles não viram canal. Para trocar a lista, edite o JSON (`id`, `brand`, `title`, `year`) e rode `pnpm catalog` de novo. O relatório mostra quantos comerciais ficaram e quantos foram descartados.
 
 **Durações (YouTube Data API):** o comando consulta a duração e o status de embed de cada vídeo na YouTube Data API v3, então precisa de uma chave: `YOUTUBE_API_KEY=... pnpm catalog` (crie a chave no Google Cloud Console com a YouTube Data API v3 ativada). A chave só é lida da variável de ambiente; nunca a coloque no repositório.
